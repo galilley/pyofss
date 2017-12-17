@@ -37,7 +37,7 @@ def reduce_to_range(x, ys, first_value, last_value):
     From a range given by first_value and last_value, attempt to reduce
     x array to required range while also reducing corresponding y array.
     """
-    print "Attempting to reduce storage arrays to specified range..."
+    print("Attempting to reduce storage arrays to specified range...")
     if last_value > first_value:
         def find_nearest(array, value):
             """ Return the index and value closest to those provided. """
@@ -47,8 +47,8 @@ def reduce_to_range(x, ys, first_value, last_value):
         first_index, x_first = find_nearest(x, first_value)
         last_index, x_last = find_nearest(x, last_value)
 
-        print "Required range: [{0}, {1}]\nActual range: [{2}, {3}]".format(
-            first_value, last_value, x_first, x_last)
+        print("Required range: [{0}, {1}]\nActual range: [{2}, {3}]".format(
+            first_value, last_value, x_first, x_last))
 
         # The returned slice does NOT include the second index parameter. To
         # include the element corresponding to last_index, the second index
@@ -66,7 +66,7 @@ def reduce_to_range(x, ys, first_value, last_value):
 
         return sliced_x, sliced_ys
     else:
-        print "Cannot reduce storage arrays unless last_value > first_value"
+        print("Cannot reduce storage arrays unless last_value > first_value")
 
 
 class Storage(object):
@@ -175,13 +175,13 @@ class Storage(object):
         # As[0] = [ A_0, A_1, ... , A_N-1 ]
         if isinstance(self.As[0][0], collections.Iterable):
             # Separate into channel_0 As and channel_1 As:
-            As_c0, As_c1 = zip(*self.As)
+            As_c0, As_c1 = list(zip(*self.As))
 
             As_c0 = self.interpolate_As(zs, As_c0)
             As_c1 = self.interpolate_As(zs, As_c1)
 
             # Interleave elements from both channels into a single array:
-            self.As = zip(As_c0, As_c1)
+            self.As = list(zip(As_c0, As_c1))
         else:
             self.As = self.interpolate_As(zs, self.As)
 

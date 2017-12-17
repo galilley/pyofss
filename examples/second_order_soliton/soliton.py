@@ -50,10 +50,10 @@ def generate_reference(domain):
 def save_simulations(domain, data_directory, methods, steps):
     """ Save data for each method and step to file. """
     for method in methods:
-        print "%s" % method
+        print("%s" % method)
 
         for step in steps:
-            print "\t%d" % step
+            print("\t%d" % step)
 
             method_step = "-".join([method, str(step)])
             filename = os.path.join(data_directory, method_step)
@@ -87,7 +87,7 @@ def calculate_relative_error(data_directory, method, step, A_true):
 def save_relative_errors(data_directory, methods, steps, A_true):
     """ Save calculated relative errors to file. """
     for method in methods:
-        print "%s" % method
+        print("%s" % method)
 
         filename = ".".join((str(method), "dat"))
         filename = os.path.join(data_directory, filename)
@@ -96,7 +96,7 @@ def save_relative_errors(data_directory, methods, steps, A_true):
 
         results = []
         for step in steps:
-            print "\t%d" % step
+            print("\t%d" % step)
 
             error = calculate_relative_error(
                 data_directory, method, step, A_true)
@@ -131,7 +131,7 @@ def generate_plot(data_directory, methods):
             lines = f.readlines()
             # Skip first line, split on tab character,
             # and unpack into two lists:
-            (steps, results) = zip(*[line.split("\t") for line in lines[1:]])
+            (steps, results) = list(zip(*[line.split("\t") for line in lines[1:]]))
 
         plt.xlabel("Number of steps")
         plt.ylabel("Mean relative error")

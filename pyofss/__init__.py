@@ -22,57 +22,57 @@
 import numpy as np
 
 # Import simulation modules
-from system import System
-from domain import Domain
+from .system import System
+from .domain import Domain
 
 # Import system modules
-from modules.generator import Generator
-from modules.gaussian import Gaussian
-from modules.sech import Sech
-from modules.amplifier import Amplifier
-from modules.bit import Bit, Bit_stream
-from modules.fibre import Fibre
-from modules.storage import reduce_to_range
-from modules.filter import Filter
-from modules.sat_absorber import Sat_absorber
-from modules.modulation import Modulation
-from modules.splitter import Splitter
-from modules.plotter import *
-from modules.amplifier_ch import Amplifier_ch
-from modules.amplifier_ch import Amplifier_ch_numb
-from modules.coupler import Coupler
-from modules.filter_doubl import Filter_doubl
-from modules.diss_soliton import Diss_soliton
-from modules.mirror import Mirror
-from modules.delay import Delay
-from modules.static_pump_wdm import StaticPumpWDM
+from .modules.generator import Generator
+from .modules.gaussian import Gaussian
+from .modules.sech import Sech
+from .modules.amplifier import Amplifier
+from .modules.bit import Bit, Bit_stream
+from .modules.fibre import Fibre
+from .modules.storage import reduce_to_range
+from .modules.filter import Filter
+from .modules.sat_absorber import Sat_absorber
+from .modules.modulation import Modulation
+from .modules.splitter import Splitter
+from .modules.plotter import *
+from .modules.amplifier_ch import Amplifier_ch
+from .modules.amplifier_ch import Amplifier_ch_numb
+from .modules.coupler import Coupler
+from .modules.filter_doubl import Filter_doubl
+from .modules.diss_soliton import Diss_soliton
+from .modules.mirror import Mirror
+from .modules.delay import Delay
+from .modules.static_pump_wdm import StaticPumpWDM
 
 # Import helper functions
-from domain import nu_to_omega, nu_to_lambda
-from domain import omega_to_nu, omega_to_lambda
-from domain import lambda_to_nu, lambda_to_omega
-from domain import dnu_to_dlambda, dlambda_to_dnu
+from .domain import nu_to_omega, nu_to_lambda
+from .domain import omega_to_nu, omega_to_lambda
+from .domain import lambda_to_nu, lambda_to_omega
+from .domain import dnu_to_dlambda, dlambda_to_dnu
 
 # Import useful conversions
-from field import fft, ifft, fftshift, ifftshift
-from field import temporal_power, spectral_power
-from field import phase, chirp
-from field import energy
-from field import inst_freq
+from .field import fft, ifft, fftshift, ifftshift
+from .field import temporal_power, spectral_power
+from .field import phase, chirp
+from .field import energy
+from .field import inst_freq
 
 # Import pulse width conversion function
-from modules.generator import convert_pulse_width
+from .modules.generator import convert_pulse_width
 
 # Import conversions for dispersion and attenuation
-from modules.linearity import convert_dispersion_to_physical
-from modules.linearity import convert_dispersion_to_engineering
-from modules.linearity import convert_alpha_to_linear
-from modules.linearity import convert_alpha_to_dB
+from .modules.linearity import convert_dispersion_to_physical
+from .modules.linearity import convert_dispersion_to_engineering
+from .modules.linearity import convert_alpha_to_linear
+from .modules.linearity import convert_alpha_to_dB
 
 # Import helper functions for nonlinear parameter and raman term
-from modules.nonlinearity import calculate_gamma
-from modules.nonlinearity import calculate_raman_term
+from .modules.nonlinearity import calculate_gamma
+from .modules.nonlinearity import calculate_raman_term
 
 # Import function for work with files
-from system import field_save
-from system import field_load
+from .system import field_save
+from .system import field_load

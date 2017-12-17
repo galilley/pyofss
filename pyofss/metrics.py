@@ -20,7 +20,7 @@
 
 import numpy as np
 
-from field import temporal_power
+from .field import temporal_power
 
 
 def generate_eye_data(domain, field, scale=None):
@@ -141,7 +141,7 @@ class Metrics(object):
                     ones.append(datum)
 
             if((len(zeros) < 4) or (len(ones) < 4)):
-                print "Not enough ones and zeros to calculate Q"
+                print("Not enough ones and zeros to calculate Q")
                 #~raise Exception("Not enough ones and zeros to calculate Q")
 
             absolute_difference = np.abs(np.mean(ones) - np.mean(zeros))

@@ -18,9 +18,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from linearity import Linearity
-from nonlinearity import Nonlinearity
-from stepper import Stepper
+from .linearity import Linearity
+from .nonlinearity import Nonlinearity
+from .stepper import Stepper
 
 
 class Fibre(object):

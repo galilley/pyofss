@@ -44,8 +44,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'pyofss'
-copyright = u'2011, 2012 David Bolt (daibo)'
+project = 'pyofss'
+copyright = '2011, 2012 David Bolt (daibo)'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -181,8 +181,8 @@ latex_font_size = '11pt'
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'pyofss.tex', u'Pyofss Documentation',
-   u'David Bolt (daibo)', 'manual'),
+  ('index', 'pyofss.tex', 'Pyofss Documentation',
+   'David Bolt (daibo)', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of

@@ -194,7 +194,7 @@ class Linearity(object):
 
     def default_exp_f_cached(self, A, h):
         if self.cached_factor is None:
-            print "Caching linear factor"
+            print("Caching linear factor")
             self.cached_factor = np.exp(h * self.factor)
 
         return ifft(self.cached_factor * fft(A))
@@ -209,7 +209,7 @@ class Linearity(object):
 
     def wdm_exp_f_cached(self, As, h):
         if self.cached_factor is None:
-            print "Caching linear factor"
+            print("Caching linear factor")
             self.cached_factor = [np.exp(h * self.factor[0]),
                                   np.exp(h * self.factor[1])]
 

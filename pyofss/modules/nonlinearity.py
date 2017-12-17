@@ -81,26 +81,26 @@ class Nonlinearity(object):
             self, "%s_nonlinearity" % sim_type, self.default_nonlinearity)
 
         if use_all:
-            print "Using general expression for nonlinearity"
+            print("Using general expression for nonlinearity")
             self.non = getattr(self, "%s_f_all" % sim_type, self.default_f_all)
             self.exp_non = getattr(self, "%s_exp_f_all" % sim_type,
                                    self.default_exp_f_all)
         else:
             if self.self_steepening and self.raman_scattering:
-                print "Using self_steepening and raman_scattering"
+                print("Using self_steepening and raman_scattering")
                 self.non = getattr(self, "%s_f_with_ss_and_rs" % sim_type,
                                    self.default_f_with_ss_and_rs)
                 self.exp_non = getattr(
                     self, "%s_exp_f_with_ss_and_rs" % sim_type,
                     self.default_exp_f_with_ss_and_rs)
             elif self.self_steepening:
-                print "Using self_steepening"
+                print("Using self_steepening")
                 self.non = getattr(self, "%s_f_with_ss" % sim_type,
                                    self.default_f_with_ss)
                 self.exp_non = getattr(self, "%s_exp_f_with_ss" % sim_type,
                                        self.default_exp_f_with_ss)
             elif self.raman_scattering:
-                print "Using raman_scattering"
+                print("Using raman_scattering")
                 self.non = getattr(self, "%s_f_with_rs" % sim_type,
                                    self.default_f_with_rs)
                 self.exp_non = getattr(self, "%s_exp_f_with_rs" % sim_type,

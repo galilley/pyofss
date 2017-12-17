@@ -73,13 +73,13 @@ def calculate_relative_error(data_directory, method, target_error, A_true):
 
         return (number_of_ffts, mean_relative_error)
     except IOError:
-        print "Error opening file: %s" % filename
+        print("Error opening file: %s" % filename)
 
 
 def save_relative_errors(data_directory, methods, target_errors, A_true):
     """ Save calculate local relative errors to file. """
     for method in methods:
-        print "%s" % method
+        print("%s" % method)
 
         filename = ".".join((str(method), "dat"))
         filename = os.path.join(data_directory, filename)
@@ -88,7 +88,7 @@ def save_relative_errors(data_directory, methods, target_errors, A_true):
 
         results = []
         for target_error in target_errors:
-            print "\t%.1e" % target_error
+            print("\t%.1e" % target_error)
 
             result = calculate_relative_error(data_directory, method,
                                               target_error, A_true)
@@ -103,10 +103,10 @@ def save_relative_errors(data_directory, methods, target_errors, A_true):
 def save_simulations(domain, data_directory, methods, target_errors):
     """ Save simulation data for each method to file. """
     for method in methods:
-        print "%s" % method
+        print("%s" % method)
 
         for target_error in target_errors:
-            print "\t%.1e" % target_error
+            print("\t%.1e" % target_error)
 
             method_error = "-".join([method, "%.0e" % (target_error)])
             filename = os.path.join(data_directory, method_error)
@@ -151,7 +151,7 @@ def generate_plot(data_directory, methods):
             lines = f.readlines()
             # Skip first line, split on tab character,
             # and unpack into two lists:
-            (ffts, errors) = zip(*[line.split("\t") for line in lines[1:]])
+            (ffts, errors) = list(zip(*[line.split("\t") for line in lines[1:]]))
 
         plt.xlabel("Number of FFTs")
         plt.ylabel("Mean relative error")
@@ -186,9 +186,9 @@ def generate_overview_plots(domain):
 
     # Split step_sizes (list of tuples) into separate lists;
     # distances and steps:
-    (distances, steps) = zip(*storage.step_sizes)
+    (distances, steps) = list(zip(*storage.step_sizes))
 
-    print np.sum(steps)
+    print(np.sum(steps))
 
     single_plot(distances, steps, labels["z"], "Step size, h (km)",
                 filename="soliton_collision_steps")

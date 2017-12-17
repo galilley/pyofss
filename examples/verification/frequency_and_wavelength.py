@@ -27,7 +27,7 @@ system.add(Fibre(length=5.0, beta=[0.0, 0.0, 0.0, 1.0],
                  gamma=1.0, total_steps=100))
 system.run()
 
-print system.domain
+print(system.domain)
 
 P_t = temporal_power(system.fields['fibre'])
 P_nu_normalised = spectral_power(system.fields['fibre'], True)

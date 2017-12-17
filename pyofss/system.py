@@ -28,7 +28,7 @@ except:
 
 import numpy as np
 
-from domain import Domain
+from .domain import Domain
 
 
 def field_save(field, filename = 'field_out'):

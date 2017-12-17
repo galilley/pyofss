@@ -62,15 +62,15 @@ def compare_image_directory(reference_directory_of_images):
     contents of each are identical. Generate a list of those that do match
     and those that fail to match.
     """
-    print reference_directory_of_images
+    print(reference_directory_of_images)
 
     # Generate paths and figure names from examples:
     images = find_files(stored_path, "*.png", sort_results=True)
-    figure_paths, figures = zip(*images)
+    figure_paths, figures = list(zip(*images))
 
     # Generate paths and figure names from reference plots:
     ref_images = find_files(reference_directory_of_images, "*.png")
-    ref_paths, ref_figures = zip(*ref_images)
+    ref_paths, ref_figures = list(zip(*ref_images))
 
     match_pass = []
     match_fail = []
@@ -90,16 +90,16 @@ def compare_image_directory(reference_directory_of_images):
                 # Use compare_images() function which returns a boolean value:
                 if(compare_images(im_fig, im_ref)):
                     match_pass.append(figure)
-                    print "PASS - %s" % figure
+                    print("PASS - %s" % figure)
                 else:
                     match_fail.append(figure)
-                    print "FAIL - %s" % figure
+                    print("FAIL - %s" % figure)
 
-    print "\nThe following images matched their reference image:"
-    print match_pass
+    print("\nThe following images matched their reference image:")
+    print(match_pass)
 
-    print "\nThe following images failed to match their reference image:"
-    print match_fail
+    print("\nThe following images failed to match their reference image:")
+    print(match_fail)
 
 
 def run_scripts(stored_path):
@@ -108,49 +108,49 @@ def run_scripts(stored_path):
 
     matches = find_files(stored_path, "fig_*.py", sort_results=True)
     # Split a list of tuples into individual lists:
-    paths, examples = zip(*matches)
+    paths, examples = list(zip(*matches))
 
     for index, script in enumerate(examples):
-        print "%i - %s" % (index, script)
+        print("%i - %s" % (index, script))
 
-    user_input = raw_input("Choose script(s) to run: ")
+    user_input = input("Choose script(s) to run: ")
     # Split string into whitespace separated components, return a list
     options = user_input.split()
     # Make sure something was entered:
     if(len(options) > 0):
         # If the second entry is '-', assume a range has been entered
         if(len(options) == 3 and options[1] == '-'):
-            indices = range(int(options[0]), int(options[2]) + 1)
+            indices = list(range(int(options[0]), int(options[2]) + 1))
         else:
             indices = [int(option) for option in options]
-        print "Selected scripts: ", indices
+        print("Selected scripts: ", indices)
 
-        use_animations = raw_input("Press A to allow animations: ")
+        use_animations = input("Press A to allow animations: ")
         if(str.upper(use_animations) == 'A'):
             allow_animations = True
         else:
             allow_animations = False
 
-        confirm = raw_input("Press Y to run chosen scripts: ")
+        confirm = input("Press Y to run chosen scripts: ")
         if(str.upper(confirm) == 'Y'):
             for index in indices:
                 try:
-                    print "\n-------------------------------------------------"
-                    print "\tRunning script: %i - %s\n" % (index,
-                                                           examples[index])
+                    print("\n-------------------------------------------------")
+                    print("\tRunning script: %i - %s\n" % (index,
+                                                           examples[index]))
                     os.chdir(paths[index])
                     if(allow_animations):
                         subprocess.call(("python", examples[index], "animate"))
                     else:
                         subprocess.call(("python", examples[index]))
-                    print "-------------------------------------------------\n"
+                    print("-------------------------------------------------\n")
                 except:
-                    print "Problem running selected script!"
+                    print("Problem running selected script!")
                 finally:
                     # Important to restore original directory:
                     os.chdir(stored_path)
         else:
-            print "Not running any scripts. Exiting..."
+            print("Not running any scripts. Exiting...")
     else:
         print("No scripts selected. Exiting...")
 
@@ -158,16 +158,16 @@ if __name__ == "__main__":
 
     # Store current directory
     stored_path = os.getcwd()
-    print "Current path: %s" % os.getcwd()
+    print("Current path: %s" % os.getcwd())
 
-    print "Select menu option number:"
+    print("Select menu option number:")
     prompt = "\n1 - Run scripts; \n2 - Compare output plots to reference.\n-->"
-    option = int(raw_input(prompt))
+    option = int(input(prompt))
 
     if(option == 1):
         run_scripts(stored_path)
     elif(option == 2):
-        input_dir = raw_input("Enter directory of reference plots:\n-->")
+        input_dir = input("Enter directory of reference plots:\n-->")
         compare_image_directory(input_dir)
     else:
-        print "Option does not exist"
+        print("Option does not exist")

@@ -20,9 +20,9 @@
 
 from scipy import sqrt, log, power
 
-from bit import Bit
-from gaussian import Gaussian
-from sech import Sech
+from .bit import Bit
+from .gaussian import Gaussian
+from .sech import Sech
 
 
 def convert_pulse_width(width, to_fwhm=True, shape="gaussian", m=1):
@@ -45,7 +45,7 @@ def convert_pulse_width(width, to_fwhm=True, shape="gaussian", m=1):
         else:
             return width * 0.5 / log(1.0 + sqrt(2.0))
     else:
-        print "Pulse shape not recognised: %s" % shape
+        print("Pulse shape not recognised: %s" % shape)
 
 
 class Generator(object):

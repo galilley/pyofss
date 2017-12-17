@@ -21,8 +21,8 @@
 import numpy as np
 from scipy import linalg
 
-from storage import Storage
-from solver import Solver
+from .storage import Storage
+from .solver import Solver
 
 
 class Stepper(object):
@@ -299,7 +299,7 @@ if __name__ == "__main__":
                       method="RKF", traces=50)
     A_in = 1.0
     A_out = stepper(A_in)
-    print "A_out = %.17f" % (A_out)
+    print("A_out = %.17f" % (A_out))
 
     x = stepper.storage.z
     y = stepper.storage.As

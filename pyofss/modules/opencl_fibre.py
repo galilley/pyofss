@@ -184,23 +184,23 @@ class OpenclFibre(object):
     def print_device_info():
         """ Output information on each OpenCL platform and device. """
         for platform in cl.get_platforms():
-            print "=" * 60
-            print "Platform information:"
-            print "Name: ", platform.name
-            print "Profile: ", platform.profile
-            print "Vender: ", platform.vendor
-            print "Version: ", platform.version
+            print("=" * 60)
+            print("Platform information:")
+            print("Name: ", platform.name)
+            print("Profile: ", platform.profile)
+            print("Vender: ", platform.vendor)
+            print("Version: ", platform.version)
 
             for device in platform.get_devices():
-                print "-" * 60
-                print "Device information:"
-                print "Name: ", device.name
-                print "Type: ", cl.device_type.to_string(device.type)
-                print "Memory: ", device.global_mem_size // (1024 ** 2), "MB"
-                print "Max clock speed: ", device.max_clock_frequency, "MHz"
-                print "Compute units: ", device.max_compute_units
+                print("-" * 60)
+                print("Device information:")
+                print("Name: ", device.name)
+                print("Type: ", cl.device_type.to_string(device.type))
+                print("Memory: ", device.global_mem_size // (1024 ** 2), "MB")
+                print("Max clock speed: ", device.max_clock_frequency, "MHz")
+                print("Compute units: ", device.max_compute_units)
 
-            print "=" * 60
+            print("=" * 60)
 
     def send_arrays_to_device(self, field, field_temp,
                               field_interaction, factor):
@@ -232,7 +232,7 @@ class OpenclFibre(object):
     def cl_linear_cached(self, field_buffer, stepsize, factor_buffer):
         """ Linear part of step (cached version). """
         if (self.cached_factor is False):
-            print "Caching factor"
+            print("Caching factor")
             self.prg.cl_cache(self.queue, self.shape, None,
                               factor_buffer.data, self.np_float(stepsize))
             self.cached_factor = True
