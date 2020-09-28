@@ -1,6 +1,5 @@
 
 """
-    Copyright (C) 2011, 2012  David Bolt
 
     This file is part of pyofss.
 
@@ -21,21 +20,20 @@
 from scipy import power, sqrt
 from pyofss.field import fft, ifft
 from pyofss.field import energy
-import numpy as np
 
 
-class Amplifier(object):
+class Amplifier_ch(object):
     """
     :param string name: Name of this module
     :param double gain: Amount of (logarithmic) gain. *Unit: dB*
-    :param double E_saturation: Energy of saturation gain. *Unit: nJ*
     :param double P_saturation: Power of saturation gain. *Unit: W*
+    :param double E_saturation: Energy of saturation gain. *Unit: nJ*
     :param double rep_rate: Repetition rate of pulse. *Unit: MHz*
 
-    Simple amplifier provides gain but no noise
+    Simple amplifier provides gain on two channels are independent
     """
-    def __init__(self, name="amplifier", gain=None,
-                 E_sat=None, P_sat=None, rep_rate=None):
+    def __init__(self, name="amplifier_ch",
+                 gain=None, E_sat=None, P_sat=None, rep_rate=None):
 
         if gain is None:
             raise Exception("The gain is not defined.")
@@ -54,26 +52,51 @@ class Amplifier(object):
             self.E_sat = 1e3*P_sat/rep_rate   #nJ
         else:
             self.E_sat = None
+
         self.field = None
+        self.E_ch1 = None
+        self.E_ch2 = None
+        self.sqrt_G = None
 
     def __call__(self, domain, field):
-        # Convert field to spectral domain:
-        self.field = fft(field)
+        #Calculate energy of field for channel I
+        self.E_ch1 = energy(field[0], domain.t)
+        #Calculate energy of field for channel II
+        self.E_ch2 = energy(field[1], domain.t)
 
         # Calculate linear gain from logarithmic gain (G_dB -> G_linear)
         G = power(10, 0.1 * self.gain)
         if self.E_sat is not None:
-            E = energy(field, domain.t)
-            print E
-            G = G/(1.0 + E/self.E_sat)
-        sqrt_G = sqrt(G)
+            G = G/(1.0 + (self.E_ch1 + self.E_ch2)/self.E_sat)
+        self.sqrt_G = sqrt(G)
 
-        if domain.channels > 1:
-            self.field[0] *= sqrt_G
-            self.field[1] *= sqrt_G
+        return field
+
+class Amplifier_ch_numb(object):
+    """
+    :param string name: Name of this module
+    :param int numb_ch: Number of channel
+    :param class ampl_main: Main amplifier, where the gain parametrs come from
+
+    Providing gain field of channels.
+    """
+    def __init__(self, name="amplifier_ch", numb_ch = 1, ampl_main = None):
+        if not 0 < numb_ch < 3:
+            raise Exception("Number of channel must be 1 or 2")
+
+        self.name = name + str(numb_ch)
+        self.numb_ch = numb_ch
+        self.ampl_main = ampl_main
+
+        self.field = None
+
+    def __call__(self, domain, field):
+        # Convert field to spectral domain:
+        self.field = fft(field[self.numb_ch - 1])
+
+        self.field *= self.ampl_main.sqrt_G
+        if self.numb_ch > 1:
+            return [field[0], ifft(self.field)]
         else:
-            self.field *= sqrt_G
-
-        # convert field back to temporal domain:
-        return ifft(self.field)
+            return [ifft(self.field), field[1]]
 

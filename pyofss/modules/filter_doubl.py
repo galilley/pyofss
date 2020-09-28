@@ -1,6 +1,6 @@
 
 """
-    Copyright (C) 2011, 2012  David Bolt, 2019, 2020 Vlad Efremov, Denis Kharenko
+    Copyright (C) 2020 Vlad Efremov, Denis Kharenko
 
     This file is part of pyofss 2.0.
 
@@ -20,8 +20,9 @@
 
 import numpy as np
 from scipy import exp, power, log
-
 from pyofss.field import fft, ifft, ifftshift
+import matplotlib.pyplot as plt
+from pyofss import *
 
 
 # Define exceptions
@@ -37,10 +38,14 @@ class NotIntegerError(FilterError):
     pass
 
 
-class Filter(object):
+class Filter_doubl(object):
     """
     :param string name: Name of this module
-    :param double width_nu: Spectral bandwidth (HWIeM). *Unit: THz*
+    :param double width_nu1: Spectral bandwidth of first
+                                filter (HWIeM). *Unit: THz*
+    :param double width_nu2: Spectral bandwidth of second
+                                filter (HWIeM). *Unit: THz*
+    :param double relation: Ratio of filter amplitudes
     :param double offset_nu: Offset frequency relative to domain centre
                             frequency. *Unit: THz*
     :param Uint m: Order parameter. m > 1 describes a super-Gaussian filter
@@ -48,15 +53,22 @@ class Filter(object):
     :param bool using_fwhm: Determines whether the width_nu parameter is a
                             full-width at half-maximum measure (FWHM), or
                             a half-width at 1/e-maximum measure (HWIeM).
-    :param type: specify which radiation will be used next, reflected or past
+    :param type: specify which radiation will be used next
 
-    Generate a super-Gaussian filter. A HWIeM bandwidth is used internally; a
+    Generate a double super-Gaussian filter. A HWIeM bandwidth is used internally; a
     FWHM bandwidth will be converted on initialisation.
     """
-    def __init__(self, name="filter", width_nu=0.1, offset_nu=0.0,
-                 m=1, channel=0, using_fwhm=False, type_filt = "reflected"):
+    def __init__(self, name="filter_double", 
+                 width_nu1=0.1, width_nu2=1.0,
+                 relation=2. ,offset_nu=0.0,
+                 m=1, channel=0, using_fwhm=False,
+                 type_filt = "reflected"):
 
-        if not (1e-6 < width_nu < 1e3):
+        if not (1e-6 < width_nu1 < 1e3):
+            raise OutOfRangeError(
+                "width_nu is out of range. Must be in (1e-6, 1e3)")
+
+        if not (1e-6 < width_nu2 < 1e3):
             raise OutOfRangeError(
                 "width_nu is out of range. Must be in (1e-6, 1e3)")
 
@@ -72,6 +84,9 @@ class Filter(object):
             raise OutOfRangeError(
                 "channel is out of range. Must be in [0, 2)")
 
+        if not (relation > 0):
+            raise OutOfRangeError("relation must be a positive")
+
         if int(m) != m:
             raise NotIntegerError("m must be an integer")
 
@@ -79,17 +94,16 @@ class Filter(object):
             raise NotIntegerError("channel must be an integer")
 
         self.name = name
-        self.width_nu = width_nu
+        self.width_nu1 = width_nu1
+        self.width_nu2 = width_nu2
         self.offset_nu = offset_nu
         self.m = m
         self.channel = channel
         self.fwhm_nu = None
         self.type = type_filt
 
-        # For a FWHM filter width, store then convert to a HWIeM filter width:
-        if using_fwhm:
-            self.fwhm_nu = width_nu  # store fwhm filter width
-            self.width_nu *= 0.5 / power(log(2.0), 1.0 / (2 * m))
+        self.a1 = 1./(relation + 1.)
+        self.a2 = relation/(relation + 1.)
 
         self.shape = None
         self.field = None
@@ -112,9 +126,10 @@ class Filter(object):
         self.field = fft(field)
 
         delta_nu = domain.nu - domain.centre_nu - self.offset_nu
-        factor = power(delta_nu / self.width_nu, (2 * self.m))
+        factor1 = power(delta_nu / self.width_nu1, (2 * self.m))
+        factor2 = power(delta_nu / self.width_nu2, (2 * self.m))
         # Frequency values are in order, inverse shift to put in fft order:
-        self.shape = exp(-0.5 * ifftshift(factor))
+        self.shape = self.a1*exp(-0.5 * ifftshift(factor1)) + self.a2*exp(-0.5 * ifftshift(factor2))
 
         if domain.channels > 1:
             # Filter is applied only to one channel:
@@ -142,8 +157,9 @@ class Filter(object):
                 "Require spectral array with at least 8 values")
 
         delta_nu = nu - centre_nu - self.offset_nu
-        factor = power(delta_nu / self.width_nu, (2 * self.m))
-        self.shape = exp(-0.5 * factor)
+        factor1 = power(delta_nu / self.width_nu1, (2 * self.m))
+        factor2 = power(delta_nu / self.width_nu2, (2 * self.m))
+        self.shape = self.a1*exp(-0.5 * factor1) + self.a2*exp(-0.5 * factor2)
 
         return np.abs(self.shape) ** 2
 
@@ -155,21 +171,24 @@ class Filter(object):
         Output information on Filter.
         """
         output_string = [
-            'width_nu = {0:f} THz', 'fwhm_nu = {1:f} THz',
-            'offset_nu = {2:f} THz', 'm = {3:d}', 'channel = {4:d}',
-            'type_filt = {5:s}']
+            'amplitude1 = {0:f}', 'amplitude2 = {1:f}',
+            'width_nu1 = {2:f} THz', 'width_nu2 = {3:f} THz',
+            'offset_nu = {4:f} THz', 'm = {5:d}', 'channel = {6:d}',
+            'type_filt = {7:s}']
 
         return "\n".join(output_string).format(
-            self.width_nu, self.calculate_fwhm(),
+            self.a1, self.a2,
+            self.width_nu1, self.width_nu2,
             self.offset_nu, self.m, self.channel,
             self.type)
 
+
 if __name__ == "__main__":
     """ Plot the power transfer function of the filter """
-    from pyofss import Domain, Filter, single_plot
+    from pyofss import Domain, Filter_doubl, single_plot
 
     domain = Domain(centre_nu=193.0)
-    gauss_filter = Filter(offset_nu=1.5)
+    gauss_filter = Filter_doubl(offset_nu=1.5)
     filter_tf = gauss_filter.transfer_function(domain.nu, domain.centre_nu)
 
     # Expect the filter transfer function to be centred at 194.5 THz:

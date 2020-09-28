@@ -34,6 +34,7 @@ class DefaultParameters(unittest2.TestCase):
         self.assertEqual(gfilter.m, 1)
         self.assertEqual(gfilter.channel, 0)
         self.assertIsNone(gfilter.fwhm_nu)
+        self.assertEqual(gfilter.type, "reflected")
 
 
 class BadParameters(unittest2.TestCase):
@@ -41,14 +42,14 @@ class BadParameters(unittest2.TestCase):
     def test_too_low(self):
         """ Should fail when parameters are too low """
         self.assertRaises(OutOfRangeError, Filter, width_nu=1e-6)
-        self.assertRaises(OutOfRangeError, Filter, offset_nu=-100.0)
+        self.assertRaises(OutOfRangeError, Filter, offset_nu=-200.0)
         self.assertRaises(OutOfRangeError, Filter, m=0)
         self.assertRaises(OutOfRangeError, Filter, channel=-1)
 
     def test_too_high(self):
         """ Should fail when parameters are too high """
         self.assertRaises(OutOfRangeError, Filter, width_nu=1e3)
-        self.assertRaises(OutOfRangeError, Filter, offset_nu=100.0)
+        self.assertRaises(OutOfRangeError, Filter, offset_nu=200.0)
         self.assertRaises(OutOfRangeError, Filter, m=50)
         self.assertRaises(OutOfRangeError, Filter, channel=2)
 
@@ -64,7 +65,7 @@ class CheckInputAndOutput(unittest2.TestCase):
         """ Check filter outputs its values correctly """
         gfilter = Filter("filter", 0.2, 0.5, 4, 1)
         expected_string = ['width_nu = 0.200000 THz', 'fwhm_nu = 0.382088 THz',
-                           'offset_nu = 0.500000 THz', 'm = 4', 'channel = 1']
+                           'offset_nu = 0.500000 THz', 'm = 4', 'channel = 1', "type_filt = reflected"]
         self.assertEqual(str(gfilter), '\n'.join(expected_string))
 
 

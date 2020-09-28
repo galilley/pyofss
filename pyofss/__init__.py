@@ -38,7 +38,10 @@ from modules.sat_absorber import Sat_absorber
 from modules.modulation import Modulation
 from modules.splitter import Splitter
 from modules.plotter import *
+from modules.amplifier_ch import Amplifier_ch
+from modules.amplifier_ch import Amplifier_ch_numb
 from modules.coupler import Coupler
+from modules.filter_doubl import Filter_doubl
 from modules.diss_soliton import Diss_soliton
 from modules.mirror import Mirror
 from modules.delay import Delay
