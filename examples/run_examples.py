@@ -20,7 +20,7 @@
 
 import os
 import fnmatch
-import Image
+from PIL import Image
 from PIL import ImageChops
 
 

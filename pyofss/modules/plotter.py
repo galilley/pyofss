@@ -1,6 +1,6 @@
 
 """
-    Copyright (C) 2011, 2012  David Bolt
+    Copyright (C) 2011, 2012  David Bolt, 2019-2020 Vlad Efremov, Denis Kharenko
 
     This file is part of pyofss.
 
@@ -19,6 +19,7 @@
 """
 
 from matplotlib import cm
+from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
@@ -35,7 +36,8 @@ labels = {"t": "Time, $t \, (ps)$",
           "chirp": "Frequency chirp, $\delta \omega \, (rad / ps)$",
           "t_normal": r"Normalised time, $\frac{t}{T_0}$",
           "xi": r"Normalised distance, $\xi = \frac{z}{L_D}$",
-          "xi_prime": r"Normalised distance, $\xi' = \frac{z}{L_D'}$"}
+          "xi_prime": r"Normalised distance, $\xi' = \frac{z}{L_D'}$",
+          "inst_nu": r"Inst. frequency, $\nu \, (THz)$"}
 
 
 def map_plot(x, y, z, x_label="", y_label="", z_label="",
@@ -152,7 +154,8 @@ def waterfall_plot(x, y, z, x_label="", y_label="", z_label="",
 
 def single_plot(x, y, x_label="", y_label="", label="",
                 x_range=None, y_range=None, use_fill=True,
-                alpha=0.2, filename="", style="b-", fill_colour="b"):
+                alpha=0.2, filename="", style="b-", fill_colour="b",
+                inst_freq = None, y2_label="", y2_range=None):
     """
     :param Dvector x: First axis
     :param Dvector y: Second axis
@@ -166,27 +169,39 @@ def single_plot(x, y, x_label="", y_label="", label="",
     :param string filename: Location to save file. If "", use interactive plot
     :param string style: Style of plot data. E.g. "g+" plots green plus signs
     :param string fill_colour: Filled region colour. E.g. "b" uses a blue fill
+    :param Dvector inst_freq: additional axis on the right side
+    :param string y2_label: Label for additional axis
+    :param Dvector y2_range: Change range of additional axis if not None
 
     Generate a single plot.
     """
+
     print "\nGenerating single_plot..."
     plt.clf()
+    fig = plt.figure()
+    ax1 = fig.add_subplot(111)
+    ax1.plot(x, y, style, label=label)
 
-    plt.plot(x, y, style, label=label)
+    if inst_freq is not None:
+        ax2 = ax1.twinx()
+        ax2.plot(x, inst_freq, "g--")
+        ax2.set_ylabel(y2_label)
+        if y2_range is not None:
+            ax2.ylim(y2_range)
 
     if use_fill:
-        plt.fill_between(x, y, color=fill_colour, alpha=alpha)
+        ax1.fill_between(x, y, color=fill_colour, alpha=alpha)
 
-    plt.xlabel(x_label)
-    plt.ylabel(y_label)
+    ax1.set_xlabel(x_label)
+    ax1.set_ylabel(y_label)
 
     if x_range is not None:
-        plt.xlim(x_range)
+        ax1.xlim(x_range)
     if y_range is not None:
-        plt.ylim(y_range)
+        ax1.ylim(y_range)
 
     if label is not "":
-        plt.legend()
+        ax1.legend()
 
     if filename:
         plt.savefig(filename)
@@ -197,7 +212,8 @@ def single_plot(x, y, x_label="", y_label="", label="",
 
 def double_plot(x, y, X, Y, x_label="", y_label="", X_label="",
                 Y_label="", x_range=None, y_range=None, X_range=None,
-                Y_range=None, use_fill=True, alpha=0.2, filename=""):
+                Y_range=None, use_fill=True, alpha=0.2, filename="",
+                inst_freq = None, y2_label="", y2_range=None):
     """
     :param Dvector x: First axis of upper plot
     :param Dvector y: Second axis of upper plot
@@ -214,6 +230,9 @@ def double_plot(x, y, X, Y, x_label="", y_label="", X_label="",
     :param bool use_fill: Fill area between plot line and axis
     :param double alpha: Transparency of filled area
     :param string filename: Location to save file. If "", use interactive plot
+    :param Dvector inst_freq: additional axis on the right side
+    :param string y2_label: Label for additional axis
+    :param Dvector y2_range: Change range of additional axis if not None
 
     Generate a double plot. The two plots will be arranged vertically,
     one above the other.
@@ -227,6 +246,13 @@ def double_plot(x, y, X, Y, x_label="", y_label="", X_label="",
 
     ax1.plot(x, y)
     ax2.plot(X, Y)
+
+    if inst_freq is not None:
+        ax3 = ax1.twinx()
+        ax3.plot(x, inst_freq, "g--")
+        ax3.set_ylabel(y2_label)
+        if y2_range is not None:
+            ax3.ylim(y2_range)
 
     if use_fill:
         ax1.fill_between(x, y, alpha=alpha)
@@ -379,7 +405,8 @@ def quad_plot(x, ys, zs, x_label="", y_label="", z_labels=[""],
 
 def animated_plot(x, y, z, x_label="", y_label="", z_label="",
                   x_range=None, y_range=None, alpha=0.2, fps=5,
-                  clear_temp=True, frame_prefix="_tmp", filename=""):
+                  clear_temp=True, frame_prefix=".tmp", filename="",
+                  use_logscale=False):
     """
     :param Dvector x: First axis
     :param VDvector y: Array of second axis
@@ -394,6 +421,7 @@ def animated_plot(x, y, z, x_label="", y_label="", z_label="",
     :param bool clear_temp: Remove temporary image files after completion
     :param string frame_prefix: Prefix used for each temporary file
     :param string filename: Location to save file. If "" then interactive plot
+    :param bool use_logscale: Use logarithmic (semilog) scale in Y axis
 
     Generate an animated plot, either interactive or saved as a video.
     """
@@ -414,7 +442,10 @@ def animated_plot(x, y, z, x_label="", y_label="", z_label="",
 
     images = []
     for i in range(len(y)):
-        line, = plt.plot(x, y[i], 'b-')
+        if use_logscale is False:
+            line, = plt.plot(x, y[i], 'b-')
+        else:
+            line, = plt.semilogy(x, y[i], 'b-')
         label = plt.legend([line], [z_label.format(z[i])])
         # The following line is necessary when using ani.save(), otherwise the
         # legend is only shown on the last frame!

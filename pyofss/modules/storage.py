@@ -87,6 +87,10 @@ class Storage(object):
         # Accumulate number of fft and ifft operations used for a stepper run:
         self.fft_total = 0
 
+    def reset_array(self):
+        self.As = []
+        self.z = []
+
     @staticmethod
     def reset_fft_counter():
         """ Resets the global variable located in the field module. """

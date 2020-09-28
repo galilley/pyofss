@@ -71,9 +71,9 @@ class Sech(object):
             raise OutOfRangeError(
                 "peak_power is out of range. Must be in [0.0, 1e9)")
 
-        if not (-100.0 < offset_nu < 100.0):
+        if not (-200.0 < offset_nu < 200.0):
             raise OutOfRangeError(
-                "offset_nu is out of range. Must be in (-100.0, 100.0)")
+                "offset_nu is out of range. Must be in (-200.0, 200.0)")
 
         if not (-1e3 < C < 1e3):
             raise OutOfRangeError(

@@ -100,6 +100,7 @@ class Stepper(object):
         """ Delegate to appropriate function, adaptive- or standard-stepper """
 
         self.storage.reset_fft_counter()
+        self.storage.reset_array()
 
         if self.adaptive:
             return self.adaptive_stepper(A)

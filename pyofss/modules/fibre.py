@@ -130,6 +130,8 @@ if __name__ == "__main__":
     from pyofss import Domain, System, Gaussian, Fibre
     from pyofss import temporal_power, multi_plot, labels
 
+    import time
+
     domain = Domain(bit_width=200.0, samples_per_bit=2048)
     gaussian = Gaussian(peak_power=1.0, width=1.0)
 
@@ -141,8 +143,13 @@ if __name__ == "__main__":
         sys.add(gaussian)
         sys.add(Fibre(length=5.0, method=m, total_steps=50,
                       beta=[0.0, 0.0, 0.0, 1.0], gamma=1.0))
+
+        start = time.clock()
         sys.run()
+        stop = time.clock()
         P_ts.append(temporal_power(sys.field))
+
+        print("Run time for {} method is {}".format(m, stop-start))
 
     multi_plot(sys.domain.t, P_ts, methods, labels["t"], labels["P_t"],
                methods, x_range=(80.0, 140.0))

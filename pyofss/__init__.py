@@ -57,6 +57,8 @@ from domain import dnu_to_dlambda, dlambda_to_dnu
 from field import fft, ifft, fftshift, ifftshift
 from field import temporal_power, spectral_power
 from field import phase, chirp
+from field import energy
+from field import inst_freq
 
 # Import pulse width conversion function
 from modules.generator import convert_pulse_width
@@ -70,3 +72,7 @@ from modules.linearity import convert_alpha_to_dB
 # Import helper functions for nonlinear parameter and raman term
 from modules.nonlinearity import calculate_gamma
 from modules.nonlinearity import calculate_raman_term
+
+# Import function for work with files
+from system import field_save
+from system import field_load

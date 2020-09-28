@@ -20,11 +20,21 @@
 
 import numpy as np
 import scipy.fftpack
+import scipy.integrate as integrate
+from scipy.constants import constants
+
+try:
+    import pyfftw
+    scipy.fftpack = pyfftw.interfaces.scipy_fftpack
+    pyfftw.interfaces.cache.enable()
+    print "PyFFTW has been imported, use PYFFTW_NUM_THREADS and PYFFTW_PLANNER_EFFORT for tuning"
+except:
+    pass
+
 
 # Although use of global variables is generally a bad idea, in this case it is
 # a simple solution to recording the number of ffts used:
 fft_counter = 0
-
 
 def temporal_power(A_t, normalise=False):
     """
@@ -142,3 +152,20 @@ def fftshift(A_nu):
     Shift the field values from "consecutive order" to "FFT order".
     """
     return scipy.fftpack.ifftshift(A_nu)
+
+def energy(A_t, t):
+    """
+    Energy calculation
+    """
+    E = integrate.simps(temporal_power(A_t), t*1e-3) #nJ
+
+    return E
+
+
+def inst_freq(A_t, dt):
+    """
+    Generate an array of instantaneous frequency
+    """
+    ph = phase(A_t)
+    return np.append(np.diff(ph)/dt, 0.)
+
