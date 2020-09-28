@@ -34,7 +34,15 @@ from modules.bit import Bit, Bit_stream
 from modules.fibre import Fibre
 from modules.storage import reduce_to_range
 from modules.filter import Filter
+from modules.sat_absorber import Sat_absorber
+from modules.modulation import Modulation
+from modules.splitter import Splitter
 from modules.plotter import *
+from modules.coupler import Coupler
+from modules.diss_soliton import Diss_soliton
+from modules.mirror import Mirror
+from modules.delay import Delay
+from modules.static_pump_wdm import StaticPumpWDM
 
 # Import helper functions
 from domain import nu_to_omega, nu_to_lambda

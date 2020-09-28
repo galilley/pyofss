@@ -1,0 +1,8 @@
+A(t, z) - (W)^1/2
+L_fibre - km
+energy - J
+lambda - nm
+gamma - 1/(W*km)
+t - ps
+beta_2 - ps^2/km
+beta_3 - ps^3/km
