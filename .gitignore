@@ -1,8 +1,13 @@
 
 # Compiled files:
 *.pyc
+__pycache__
+*/__pycache__
+*/*/__pycache__
+*/*/*/__pycache__
 
 # Packages
+.eggs/
 *.egg-info
 dist
 build
@@ -14,3 +19,11 @@ MANIFEST
 doc/_build/
 doc/_static/
 doc/_templates/
+
+# Temporary files
+*~
+.*~
+*.swp
+*.swo
+
+
