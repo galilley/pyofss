@@ -64,7 +64,6 @@ class Amplifier(object):
         G = power(10, 0.1 * self.gain)
         if self.E_sat is not None:
             E = energy(field, domain.t)
-            print E
             G = G/(1.0 + E/self.E_sat)
         sqrt_G = sqrt(G)
 

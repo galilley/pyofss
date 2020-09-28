@@ -21,13 +21,12 @@
 import numpy as np
 import scipy.fftpack
 import scipy.integrate as integrate
-from scipy.constants import constants
 
 try:
     import pyfftw
     scipy.fftpack = pyfftw.interfaces.scipy_fftpack
     pyfftw.interfaces.cache.enable()
-    print "PyFFTW has been imported, use PYFFTW_NUM_THREADS and PYFFTW_PLANNER_EFFORT for tuning"
+    print("PyFFTW has been imported, use PYFFTW_NUM_THREADS and PYFFTW_PLANNER_EFFORT for tuning")
 except:
     pass
 
