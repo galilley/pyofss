@@ -18,8 +18,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import numpy as np
-from scipy import exp, power, log
+from numpy import exp, abs
+# Functions are deprecated and will be removed in SciPy 2.0.0
+try:
+    from numpy.lib.scimath import power, log
+except ImportError:  #try import old syntax for compatibility reason
+    from scipy import power, log
 
 from pyofss.field import fft, ifft, ifftshift
 
@@ -145,7 +149,7 @@ class Filter(object):
         factor = power(delta_nu / self.width_nu, (2 * self.m))
         self.shape = exp(-0.5 * factor)
 
-        return np.abs(self.shape) ** 2
+        return abs(self.shape) ** 2
 
     def __str__(self):
         """

@@ -18,8 +18,12 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from numpy import pi
-from scipy import sqrt, exp, log, cosh
+from numpy import pi, exp, cosh
+# Functions are deprecated and will be removed in SciPy 2.0.0
+try:
+    from numpy.lib.scimath import sqrt, log
+except ImportError:  #try import old syntax for compatibility reason
+    from scipy import sqrt, log
 
 
 # Define exceptions

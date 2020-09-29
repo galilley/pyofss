@@ -20,7 +20,7 @@
 
 try:
     from pyfftw import byte_align
-except:
+except ImportError:
     def byte_align(v):
         return v
     pass

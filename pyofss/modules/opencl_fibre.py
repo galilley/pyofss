@@ -23,7 +23,9 @@ import numpy as np
 import pyopencl as cl
 import pyopencl.array as cl_array
 
-from pyfft.cl import Plan
+# TODO use Reikna.fft for py3
+# see e.g. https://programtalk.com/python-examples/reikna.fft.FFT/
+from pyfft.cl import Plan  
 from string import Template
 
 

@@ -19,7 +19,11 @@
 """
 
 from scipy.constants import constants
-from scipy.misc import factorial
+# factorial location changes in scipy 1.3
+try:
+    from scipy.special import factorial
+except ImportError:  # try the old one for compatibility reson
+    from scipy.misc import factorial
 from scipy import log10, exp
 import numpy as np
 
