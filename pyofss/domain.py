@@ -210,7 +210,7 @@ class Domain(object):
         # self.window_t, and to return a tuple (samples, step) instead of just
         # samples; where step is the spacing between samples.
 
-        (self.t, self.dt) = np.linspace(0.0, self.window_t,
+        (self.t, self.dt) = np.linspace(-self.window_t/2.0, self.window_t/2.0,
                                         self.total_samples, False, True)
 
         # Require nu = [_nu_min, _nu_min + window_nu)

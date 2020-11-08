@@ -37,9 +37,9 @@ def field_save(field, filename = 'field_out'):
 
 def field_load(filename = 'field_out'):
     if filename.endswith(".npz"):
-        d = np.load(filename + '.npz')['field']
+        d = np.load(filename)['field']
     elif filename.endswith(".npy"):
-        d = np.load(filename + '.npy')
+        d = np.load(filename)
     else:
         try:
             d = np.load(filename + '.npz')['field']
