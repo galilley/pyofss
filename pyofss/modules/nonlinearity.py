@@ -112,7 +112,6 @@ class Nonlinearity(object):
                                        self.default_exp_f)
 
         self.ss_factor = None
-        self.rs_factor = None
         self.h_R = None
         self.omega = None
         self.centre_omega = None
