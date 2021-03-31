@@ -58,13 +58,13 @@ class Gaussian(object):
     Generates a pulse with a Gaussian profile. A HWIeM pulse width is used
     internally; a FWHM pulse width will be converted on initialisation.
     """
-    def __init__(self, name="gaussian", position=0.5, width=10.0,
+    def __init__(self, name="gaussian", position=0.0, width=10.0,
                  peak_power=1e-3, offset_nu=0.0, m=1, C=0.0,
                  initial_phase=0.0, channel=0, using_fwhm=False):
 
-        if not (0.0 <= position <= 1.0):
+        if not (-0.5 <= position <= 0.5):
             raise OutOfRangeError(
-                "position is out of range. Must be in [0.0, 1.0]")
+                "position is out of range. Must be in [-0.5, 0.5]")
 
         if not (1e-3 < width < 1e3):
             raise OutOfRangeError(
@@ -74,9 +74,9 @@ class Gaussian(object):
             raise OutOfRangeError(
                 "peak_power is out of range. Must be in [0.0, 1e9)")
 
-        if not (-100.0 < offset_nu < 100.0):
+        if not (-300.0 < offset_nu < 300.0):
             raise OutOfRangeError(
-                "offset_nu is out of range. Must be in (-100.0, 100.0)")
+                "offset_nu is out of range. Must be in (-300.0, 300.0)")
 
         if not (0 < m < 50):
             raise OutOfRangeError(

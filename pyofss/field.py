@@ -154,6 +154,11 @@ def fftshift(A_nu):
 
 def energy(A_t, t):
     """
+    :param array_like A_t: Input field array in the temporal domain
+    :param double t: Temporal window of the simulation
+    :return: Energy of the field
+    :rtype: double
+    
     Energy calculation
     """
     E = integrate.simps(temporal_power(A_t), t*1e-3) #nJ
@@ -163,8 +168,36 @@ def energy(A_t, t):
 
 def inst_freq(A_t, dt):
     """
+    :param array_like A_t: Input field array in the temporal domain
+    :return: Instant frequency array
+    :rtype: array_like
+    
     Generate an array of instantaneous frequency
     """
     ph = phase(A_t)
     return np.append(np.diff(ph)/dt, 0.)
+
+def loss_infrared_db(wl):
+    """
+    :param wavelength, nm
+    :return: losses in dB
+    
+    See Agrawal "Fiber-Optic Communication Systems" ch2 page 56
+    x = [1500, 1600, 1650, 1700, 1750, 1800] wavelengths
+    y = [0.01, 0.05, 0.1, 0.3, 1, 2.5] losses in dB
+    """
+    p = np.array([-1.75292532e+03,  1.95607318e-02])
+    return np.exp(p[1]*(wl+p[0]))
+
+def loss_rayleigh_db(wl):
+    """
+    :param wavelength, nm
+    :return: losses in dB
+
+    See, eg. Argawal "Fiber-Optic Communication Systems" ch2
+    """
+    factor = (1-0.14/(wl*1e-3)**4)
+    factor[factor <= 0] = 1e-16
+    factor = -10*np.log10(factor)
+    return factor
 

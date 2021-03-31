@@ -44,7 +44,7 @@ class Diss_soliton(Sech):
     internally; a FWHM pulse width will be converted on initialisation.
     """
 
-    def __init__ (self, name="diss_soliton", position=0.5, width=10.0,
+    def __init__ (self, name="diss_soliton", position=0.0, width=10.0,
                  peak_power=1e-3, offset_nu=0.0, m=0, C=5.0,
                  initial_phase=0.0, channel=0, using_fwhm=False):
         super(Diss_soliton, self).__init__(name, position, width,

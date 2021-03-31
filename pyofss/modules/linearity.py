@@ -1,6 +1,6 @@
 
 """
-    Copyright (C) 2012  David Bolt
+    Copyright (C) 2012  David Bolt, 2020 Denis Kharenko
 
     This file is part of pyofss.
 
@@ -108,18 +108,23 @@ class Linearity(object):
     :param string sim_type: Type of simulation, "default" or "wdm"
     :param bool use_cache: Cache calculated values if using fixed step-size
     :param double centre_omega: Angular frequency to use for dispersion array
+    :param bool phase_lim: Limits phase values in range of [-2*pi,2*pi] and use it periodic nature
+                    could be important for GPU computations
 
     Dispersion is used by fibre to generate a fairly general dispersion array.
     """
     def __init__(self, alpha=None, beta=None, sim_type=None,
-                 use_cache=False, centre_omega=None):
+                 use_cache=False, centre_omega=None, phase_lim=False):
 
         self.alpha = alpha
         self.beta = beta
         self.centre_omega = centre_omega
+        self.phase_lim = phase_lim
 
         self.generate_linearity = getattr(self, "%s_linearity" % sim_type,
                                           self.default_linearity)
+        self.generate_cache = getattr(self, "%s_cache" % sim_type,
+                                          self.default_cache)
         self.lin = getattr(self, "%s_f" % sim_type, self.default_f)
 
         if use_cache:
@@ -188,19 +193,46 @@ class Linearity(object):
         else:
             self.factor[0] -= 0.5 * self.alpha[0]
             self.factor[1] -= 0.5 * self.alpha[1]
-            return factor
+            return self.factor
+
+    def _limit_imag_part(self, hf):
+        """
+        Align values into [-2*pi,2*pi] range
+        """
+        lhf = np.imag(hf) / (2 * np.pi)
+        return np.real(hf) + 1j * 2 * np.pi * np.modf(lhf)[0]
+
+    def default_cache(self, h):
+        hf = self.factor * h
+        if self.phase_lim:
+            hf = self._limit_imag_part(hf)
+        self.cached_factor = np.exp(hf)
+
+    def wdm_cache(self, h):
+        hf0 = self.factor[0] * h
+        hf1 = self.factor[1] * h
+        if self.phase_lim:
+            hf0 = self._limit_imag_part(hf0)
+            hf1 = self._limit_imag_part(hf1)
+        self.cached_factor = [np.exp(hf0),
+                              np.exp(hf1)]
+
+    def cache(self, h):
+        print("Caching linear factor")
+        self.generate_cache(h)
 
     def default_f(self, A, z):
         return ifft(self.factor * fft(A))
 
     def default_exp_f(self, A, h):
-        return ifft(np.exp(h * self.factor) * fft(A))
+        hf = self.factor * h
+        if self.phase_lim:
+            hf = self._limit_imag_part(hf)
+        return ifft(np.exp(hf) * fft(A))
 
     def default_exp_f_cached(self, A, h):
         if self.cached_factor is None:
-            print("Caching linear factor")
-            self.cached_factor = np.exp(h * self.factor)
-
+            self.cache(h)
         return ifft(self.cached_factor * fft(A))
 
     def wdm_f(self, As, z):
@@ -208,14 +240,16 @@ class Linearity(object):
                            ifft(self.factor[1] * fft(As[1]))])
 
     def wdm_exp_f(self, As, h):
-        return np.asarray([ifft(np.exp(h * self.factor[0]) * fft(As[0])),
-                           ifft(np.exp(h * self.factor[1]) * fft(As[1]))])
+        hf0 = h * self.factor[0]
+        hf1 = h * self.factor[1]
+        if self.phase_lim:
+            hf0 = self._limit_imag_part(hf0)
+            hf1 = self._limit_imag_part(hf1)
+        return np.asarray([ifft(np.exp(hf0) * fft(As[0])),
+                           ifft(np.exp(hf1) * fft(As[1]))])
 
     def wdm_exp_f_cached(self, As, h):
         if self.cached_factor is None:
-            print("Caching linear factor")
-            self.cached_factor = [np.exp(h * self.factor[0]),
-                                  np.exp(h * self.factor[1])]
-
+            self.cache(h)
         return np.asarray([ifft(self.cached_factor[0] * fft(As[0])),
                            ifft(self.cached_factor[1] * fft(As[1]))])

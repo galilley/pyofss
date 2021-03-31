@@ -59,13 +59,13 @@ class Sech(object):
     internally; a FWHM pulse width will be converted on initialisation.
     """
 
-    def __init__(self, name="sech", position=0.5, width=10.0,
+    def __init__(self, name="sech", position=0.0, width=10.0,
                  peak_power=1e-3, offset_nu=0.0, m=0, C=0.0,
                  initial_phase=0.0, channel=0, using_fwhm=False):
 
-        if not (0.0 <= position <= 1.0):
+        if not (-0.5 <= position <= 0.5):
             raise OutOfRangeError(
-                "position is out of range. Must be in [0.0, 1.0]")
+                "position is out of range. Must be in [-0.5, 0.5]")
 
         if not (1e-3 < width < 1e3):
             raise OutOfRangeError(

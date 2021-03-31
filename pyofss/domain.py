@@ -1,6 +1,6 @@
 
 """
-    Copyright (C) 2011, 2012  David Bolt
+    Copyright (C) 2011, 2012  David Bolt, 2020  Denis Kharenko
 
     This file is part of pyofss.
 
@@ -129,6 +129,17 @@ def dlambda_to_dnu(dlambda, Lambda=1550.0):
     return Domain.vacuum_light_speed * dlambda / (Lambda ** 2)
 
 
+def align_with_nu_grid(nu, domain):
+    """
+    :param double nu: Frequency to align. *Unit: THz*
+    :return: Aligned Frequency. *Unit: THz*
+    :rtype: double
+
+    Align value with the frequency grid to avoid spectral leakage effect
+    """
+    return int(nu/domain.dnu)*domain.dnu
+
+
 class Domain(object):
     """
     :param Uint total_bits: Total number of bits to generate
@@ -172,9 +183,9 @@ class Domain(object):
             raise OutOfRangeError(
                 "bit_width is out of range. Must be in (0.01, 10000.0)")
 
-        if not (185.0 < centre_nu < 400.0):
+        if not (185.0 < centre_nu < 600.0):
             raise OutOfRangeError(
-                "centre_nu is out of range. Must be in (185.0, 400.0)")
+                "centre_nu is out of range. Must be in (185.0, 600.0)")
 
         if not (0 < channels < 3):
             raise OutOfRangeError(
