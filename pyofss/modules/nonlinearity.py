@@ -53,8 +53,9 @@ def calculate_raman_term(domain, tau_1=12.2e-3, tau_2=32.0e-3):
 
     Calculate raman response function from tau_1 and tau_2.
     """
+    t = domain.t - domain.t.min() #shift starting point to zero
     h_R = (tau_2 ** 2 + tau_1 ** 2) / (tau_1 * tau_2 ** 2)
-    h_R *= np.exp(-domain.t / tau_2) * np.sin(domain.t / tau_1)
+    h_R *= np.exp(-t / tau_2) * np.sin(t / tau_1)
 
     return h_R
 
