@@ -55,7 +55,7 @@ if (len(sys.argv) > 1) and (sys.argv[1] == 'animate'):
                   (x[0], x[-1]), (0.0, 1.0e3), fps=20, frame_prefix="pump_",
                   filename="7-9_animation_t_pump.avi")
 
-(x, y, z_temp) = storage.get_plot_data(True, (6.0, 14.0), False, channel=1)
+(x, y, z_temp) = storage.get_plot_data(True, (-4.0, 4.0), False, channel=1)
 z = z_temp * 1.0e3
 
 map_plot(x, y, z, labels["t"], labels["P_t"], z_label,

@@ -27,15 +27,15 @@ system = System(Domain(bit_width=100.0, samples_per_bit=2048))
 absolute_separation = 3.5
 offset = absolute_separation / system.domain.bit_width
 
-system.add(Sech(peak_power=1.0, width=1.0, position=0.5 - offset))
-system.add(Sech(peak_power=1.0, width=1.0, position=0.5 + offset))
+system.add(Sech(peak_power=1.0, width=1.0, position=-offset))
+system.add(Sech(peak_power=1.0, width=1.0, position=+offset))
 
 system.add(Fibre(length=90.0, beta=[0.0, 0.0, -1.0, 0.0], gamma=1.0,
                  total_steps=200, traces=200, method='ARK4IP'))
 system.run()
 
 storage = system['fibre'].stepper.storage
-(x, y, z) = storage.get_plot_data(reduced_range=(40.0, 60.0))
+(x, y, z) = storage.get_plot_data(reduced_range=(-10.0, 10.0))
 
 map_plot(x, y, z, labels["t"], labels["P_t"], labels["z"],
          filename="5-16a_map")

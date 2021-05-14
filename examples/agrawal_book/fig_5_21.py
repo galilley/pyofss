@@ -49,7 +49,7 @@ if (len(sys.argv) > 1) and (sys.argv[1] == 'animate'):
                   r"$z = {0:7.3f} \, km$", (x[0], x[-1]), (0.0, 1.1), fps=40,
                   frame_prefix="nu_", filename="5-21_animation_nu.avi")
 
-(x, y, z) = storage.get_plot_data(reduced_range=(5.0, 45.0))
+(x, y, z) = storage.get_plot_data(reduced_range=(-5.0, 45.0))
 
 map_plot(x, y, z, labels["t"], labels["P_t"], labels["z"],
          filename="5-21_map_t")

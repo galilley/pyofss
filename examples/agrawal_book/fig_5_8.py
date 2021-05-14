@@ -29,7 +29,7 @@ system.add(Fibre(length=10.0, beta=[0.0, 0.0, -1.0, 0.0],
 system.run()
 
 storage = system['fibre'].stepper.storage
-(x, y, z) = storage.get_plot_data(reduced_range=(44.0, 56.0))
+(x, y, z) = storage.get_plot_data(reduced_range=(-6.0, 6.0))
 
 map_plot(x, y, z, labels["t"], labels["P_t"], labels["z"],
          filename="5-8_map_t")

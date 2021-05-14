@@ -29,7 +29,7 @@ system.add(Fibre(length=6.0, beta=[0.0, 0.0, 0.0, 1.0], traces=100,
 system.run()
 
 storage = system['fibre'].stepper.storage
-(x, y, z) = storage.get_plot_data(reduced_range=(290.0, 340.0))
+(x, y, z) = storage.get_plot_data(reduced_range=(-10.0, 40.0))
 
 map_plot(x, y, z, labels["t"], labels["P_t"], labels["z"], filename="3-7_map")
 
@@ -38,5 +38,5 @@ waterfall_plot(x, y, z, labels["t"], labels["z"], labels["P_t"],
 
 if (len(sys.argv) > 1) and (sys.argv[1] == 'animate'):
     animated_plot(x, y, z, labels["t"], labels["P_t"], r"$z = {0:7.3f} \, km$",
-                  x_range=(290.0, 320.0), y_range=(0.0, 1.6), fps=10,
+                  x_range=(-10.0, 20.0), y_range=(0.0, 1.6), fps=10,
                   frame_prefix="t_", filename="3-7_animation.avi")

@@ -32,4 +32,4 @@ P_nu_normalised = spectral_power(system.fields['fibre'], True)
 
 double_plot(system.domain.t, P_t, system.domain.nu, P_nu_normalised,
             labels['t'], labels['P_t'], labels['nu'], labels['P_nu'],
-            x_range=(10.0, 20.0), X_range=(190.0, 196.2), filename="4-16")
+            x_range=(-5.0, 5.0), X_range=(190.0, 196.2), filename="4-16")

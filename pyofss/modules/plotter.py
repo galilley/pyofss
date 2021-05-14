@@ -195,9 +195,9 @@ def single_plot(x, y, x_label="", y_label="", label="",
     ax1.set_ylabel(y_label)
 
     if x_range is not None:
-        ax1.xlim(x_range)
+        ax1.set_xlim(x_range)
     if y_range is not None:
-        ax1.ylim(y_range)
+        ax1.set_ylim(y_range)
 
     if label is not "":
         ax1.legend()

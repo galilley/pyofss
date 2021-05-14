@@ -38,8 +38,8 @@ for z in zs:
     chirps.append(chirp(temp, system.domain.window_nu))
 
 multi_plot(system.domain.t, P_ts, zs, labels["t"], labels["P_t"],
-           [r"$z = {0:.0f} \, km$"], (90.0, 110.0), filename="3-4")
+           [r"$z = {0:.0f} \, km$"], (-10.0, 10.0), filename="3-4")
 
 multi_plot(system.domain.t, chirps, zs,
            labels["t"], labels["chirp"], [r"$z = {0:.0f} \, km$"],
-           (80.0, 120.0), (-6.0, 6.0), filename="3-4_chirp")
+           (-20.0, 20.0), (-6.0, 6.0), filename="3-4_chirp")

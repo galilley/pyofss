@@ -32,9 +32,9 @@ def generate_reference(domain, data_directory):
     """ Generate a reference field (to machine precision), used as A_true. """
     system = System(domain)
     system.add(Sech(peak_power=8.8e-3, width=(1.0 / 0.44),
-                    position=0.625))
+                    position=0.125))
     system.add(Sech(peak_power=8.8e-3, width=(1.0 / 0.44),
-                    position=0.375, offset_nu=-0.8))
+                    position=-0.125, offset_nu=-0.8))
     system.add(Fibre("fibre", length=400.0, beta=[0.0, 0.0, -0.1, 0.0],
                      gamma=2.2, method="ark4ip", local_error=1e-14))
     system.run()
@@ -113,9 +113,9 @@ def save_simulations(domain, data_directory, methods, target_errors):
 
             system = System(domain)
             system.add(Sech(peak_power=8.8e-3, width=(1.0 / 0.44),
-                            position=0.625))
+                            position=0.125))
             system.add(Sech(peak_power=8.8e-3, width=(1.0 / 0.44),
-                            position=0.375, offset_nu=-0.8))
+                            position=-0.125, offset_nu=-0.8))
             system.add(Fibre("fibre", length=400.0,
                              beta=[0.0, 0.0, -0.1, 0.0], gamma=2.2,
                              method=method, local_error=target_error))

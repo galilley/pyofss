@@ -44,8 +44,8 @@ for l in length:
 
 double_plot(system.domain.t, P_ts[0], system.domain.nu, P_nus[0],
             labels["t"], labels["P_t"], labels["nu"], labels["P_nu"],
-            x_range=(1.5, 2.5), X_range=(146.1, 240.1), filename="4-21a")
+            x_range=(-0.5, 0.5), X_range=(146.1, 240.1), filename="4-21a")
 
 double_plot(system.domain.t, P_ts[1], system.domain.nu, P_nus[1],
             labels["t"], labels["P_t"], labels["nu"], labels["P_nu"],
-            x_range=(1.0, 3.0), X_range=(146.1, 240.1), filename="4-21b")
+            x_range=(-1.0, 1.0), X_range=(146.1, 240.1), filename="4-21b")

@@ -41,4 +41,4 @@ for z in zs:
     P_ts.append(temporal_power(field))
 
 multi_plot(system.domain.t, P_ts, zs, labels["t"], labels["P_t"],
-           [r"$z = {0:.0f} \, km$"], (0.175, 0.225), filename="5-18")
+           [r"$z = {0:.0f} \, km$"], (-0.025, 0.025), filename="5-18")

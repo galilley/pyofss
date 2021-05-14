@@ -43,7 +43,7 @@ if (len(sys.argv) > 1) and (sys.argv[1] == 'animate'):
                   frame_prefix="nu_", filename="4-9_animation_nu.avi")
 
 
-(x, y, z) = storage.get_plot_data(reduced_range=(90.0, 110.0))
+(x, y, z) = storage.get_plot_data(reduced_range=(-10.0, 10.0))
 
 map_plot(x, y, z, labels["t"], labels["P_t"], labels["z"],
          filename="4-9_map_t")

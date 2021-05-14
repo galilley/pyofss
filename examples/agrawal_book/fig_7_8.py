@@ -47,4 +47,4 @@ P_t1 = temporal_power(A_fs[1])
 
 double_plot(system.domain.t, P_t0, system.domain.t, P_t1,
             labels["t"], labels["P_t"], labels["t"], labels["P_t"],
-            x_range=(6.0, 14.0), X_range=(5.0, 10.0), filename="7-8")
+            x_range=(-4.0, 4.0), X_range=(5.0, 10.0), filename="7-8")

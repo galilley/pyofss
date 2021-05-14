@@ -42,4 +42,4 @@ z_labels = [r"$z = 0 \, km$",
             r"$z = 5 \, km$, $\beta_2 \neq \, 0 \, ps / (nm \cdot km)$"]
 
 multi_plot(system.domain.t, P_ts, z_labels, labels["t"], labels["P_t"],
-           z_labels, [95.0, 115.0], filename="3-6")
+           z_labels, [-5.0, 15.0], filename="3-6")
