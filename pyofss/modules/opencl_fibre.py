@@ -1,6 +1,7 @@
 
 """
-    Copyright (C) 2013 David Bolt
+    Copyright (C) 2013 David Bolt,
+    2020-2021 Vladislav Efremov, Denis Kharenko
 
     This file is part of pyofss.
 

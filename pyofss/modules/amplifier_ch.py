@@ -1,5 +1,6 @@
 
 """
+    Copyright (C) 2021 Vladislav Efremov
 
     This file is part of pyofss.
 

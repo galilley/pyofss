@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 """
-    Copyright (C) 2011, 2012  David Bolt
+    Copyright (C) 2011, 2012  David Bolt, 
+    2021 Vladislav Efremov, Denis Kharenko
 
     This file is part of pyofss.
 
@@ -21,13 +22,13 @@
 
 metadata = dict(
     name="pyofss",
-    version="0.9",
+    version="2.1",
     license="GNU GPL",
     platforms="POSIX",
-    author="David Bolt (daibo)",
-    author_email="djb@curvedthoughts.com",
-    url="http://curvedthoughts.com/pyofss",
-    download_url="http://pypi.python.org/pypi/pyofss",
+    author="David Bolt (daibo), Vladislav Efremov, Denis Kharenko",
+    author_email="djb@curvedthoughts.com, efremovvd@iae.nsk.su, kharenko@iae.nsk.su",
+    # url="http://curvedthoughts.com/pyofss",
+    # download_url="http://pypi.python.org/pypi/pyofss",
     description=("Optical fibre system simulator"),
     keywords=["photonic", "simulation", "fiber", "fibre", "optical"],
     packages=["pyofss", "pyofss/modules", "pyofss/tests"],
@@ -40,8 +41,8 @@ metadata = dict(
         "Natural Language :: English",
         "Operating System :: POSIX :: Linux",
         "Programming Language :: Python",
-        "Programming Language :: Python :: 2.6",
         "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering :: Physics"
     ]
 )
