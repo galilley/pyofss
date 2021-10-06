@@ -72,7 +72,7 @@ Install the latest development version of pyofss from GitHub:
 
 .. code-block:: bash
 
-   pip install git+https://github.com/daibo/pyofss.git
+   pip install git+https://github.com/galilley/pyofss.git
 
 Tests
 -----
