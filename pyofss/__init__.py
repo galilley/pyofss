@@ -48,6 +48,11 @@ from .modules.delay import Delay
 from .modules.dispersion import Dispersion
 from .modules.static_pump_wdm import StaticPumpWDM
 
+try:
+    from .modules.opencl_fibre import OpenclFibre
+except ImportError:
+    pass
+
 # Import helper functions
 from .domain import nu_to_omega, nu_to_lambda
 from .domain import omega_to_nu, omega_to_lambda
