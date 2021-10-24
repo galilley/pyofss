@@ -82,3 +82,10 @@ Tests can be run within the pyofss package:
 .. code-block:: bash
 
    python setup.py test
+
+To run a separate module use something like this:
+
+.. code-block:: bash
+
+   python3 pyofss.modules.fibre
+
