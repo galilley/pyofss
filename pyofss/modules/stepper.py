@@ -24,6 +24,22 @@ from scipy import linalg
 from .storage import Storage
 from .solver import Solver
 
+# Define exceptions
+class StepperError(Exception):
+    pass
+
+
+class SmallStepSizeError(StepperError):
+    pass
+
+
+class SuitableStepSizeError(StepperError):
+    pass
+
+
+class MaximumStepsAllocatedError(StepperError):
+    pass
+
 
 class Stepper(object):
     """
@@ -86,6 +102,7 @@ class Stepper(object):
         # Store constants for adaptive method:
         self.total_attempts = 100
         self.steps_max = 50000
+        self.step_size_min = 1e-37 # some small value
 
         self.safety = 0.9
         self.max_factor = 10.0
@@ -155,6 +172,11 @@ class Stepper(object):
     @staticmethod
     def relative_local_error(A_fine, A_coarse):
         """ Calculate an estimate of the relative local error """
+
+        # Large step can result in infs or NaNs values
+        # so, check it first
+        if np.isnan(A_fine).any() or np.isinf(A_fine).any():
+            return 1.
 
         norm_fine = linalg.norm(A_fine)
 
@@ -259,10 +281,14 @@ class Stepper(object):
 
                     break  # Successful attempt at step, move on to next step.
 
-                # Otherwise error was too large, continue with next attempt.
+                # Otherwise error was too large, continue with next attempt,
+                # but check the minimal step size first
+                else:
+                    if h < self.step_size_min:
+                        raise SmallStepSizeError("Step size is extremely small")
 
             else:
-                raise Exception("Failed to set suitable step-size")
+                raise SuitableStepSizeError("Failed to set suitable step-size")
 
             # If the desired z has been reached, then finish:
             if z >= self.length:
@@ -275,7 +301,7 @@ class Stepper(object):
 
                 return self.A_out
 
-        raise Exception("Failed to complete with maximum steps allocated")
+        raise MaximumStepsAllocatedError("Failed to complete with maximum steps allocated")
 
 if __name__ == "__main__":
     """

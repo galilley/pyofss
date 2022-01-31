@@ -132,24 +132,38 @@ if __name__ == "__main__":
 
     import time
 
-    domain = Domain(bit_width=200.0, samples_per_bit=2048)
+    domain = Domain(bit_width=200.0, samples_per_bit=2048*2)
     gaussian = Gaussian(peak_power=1.0, width=1.0)
 
     P_ts = []
-    methods = ['ss_simple', 'ss_symmetric', 'ss_sym_rk4', 'rk4ip']
+    methods = ['ss_simple', 
+            'ss_symmetric', 'ss_symmetric+ss', 'ss_symmetric+raman',  'ss_symmetric+all',  
+            'ss_sym_rk4', 
+            'rk4ip', 'rk4ip+ss', 'rk4ip+raman', 'rk4ip+all']
 
     for m in methods:
         sys = System(domain)
         sys.add(gaussian)
-        sys.add(Fibre(length=5.0, method=m, total_steps=50,
+        if m.count('+') == 0:
+            sys.add(Fibre(length=5.0, method=m, total_steps=50,
                       beta=[0.0, 0.0, 0.0, 1.0], gamma=1.0))
+        else:
+            if m.split('+')[1] == 'ss':
+                sys.add(Fibre(length=5.0, method=m.split('+')[0], total_steps=50,
+                      beta=[0.0, 0.0, 0.0, 1.0], gamma=1.0, self_steepening=True))
+            elif m.split('+')[1] == 'raman':
+                sys.add(Fibre(length=5.0, method=m.split('+')[0], total_steps=50,
+                      beta=[0.0, 0.0, 0.0, 1.0], gamma=1.0, use_all='hollenbeck'))
+            else:
+                sys.add(Fibre(length=5.0, method=m.split('+')[0], total_steps=50,
+                      beta=[0.0, 0.0, 0.0, 1.0], gamma=1.0, self_steepening=True, use_all='hollenbeck'))
 
-        start = time.clock()
+        start = time.time()
         sys.run()
-        stop = time.clock()
+        stop = time.time()
         P_ts.append(temporal_power(sys.field))
 
         print("Run time for {} method is {}".format(m, stop-start))
 
     multi_plot(sys.domain.t, P_ts, methods, labels["t"], labels["P_t"],
-               methods, x_range=(80.0, 140.0))
+               methods, x_range=(-20.0, 40.0), use_fill=False)

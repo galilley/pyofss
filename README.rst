@@ -87,5 +87,5 @@ To run a separate module use something like this:
 
 .. code-block:: bash
 
-   python3 pyofss.modules.fibre
+   python3 -m pyofss.modules.fibre
 

@@ -1,6 +1,6 @@
 
 """
-    Copyright (C) 2012  David Bolt
+    Copyright (C) 2012  David Bolt, 2021-2022 Denis Kharenko
 
     This file is part of pyofss.
 
@@ -20,10 +20,17 @@
 
 import numpy as np
 from numpy import pi
+from scipy.constants import constants
+import scipy.integrate as integrate
 
 from pyofss.field import fft, ifft, fftshift
 from pyofss.domain import Domain
 
+class NonlinearityError(Exception):
+    pass
+
+class UnknownRamanResponseError(NonlinearityError):
+    pass
 
 def calculate_gamma(nonlinear_index, effective_area,
                     centre_omega=2.0 * pi * 193.1):
@@ -51,13 +58,45 @@ def calculate_raman_term(domain, tau_1=12.2e-3, tau_2=32.0e-3):
     :return: Raman response function
     :rtype: double
 
-    Calculate raman response function from tau_1 and tau_2.
+    Calculate raman response function from tau_1 and tau_2 [1].
+
+    [1] K. J. Blow and D. Wood, IEEE JQE 25, 2665 (1989) doi: 10.1109/3.40655
     """
     t = domain.t - domain.t.min() #shift starting point to zero
     h_R = (tau_2 ** 2 + tau_1 ** 2) / (tau_1 * tau_2 ** 2)
     h_R *= np.exp(-t / tau_2) * np.sin(t / tau_1)
 
     return h_R
+
+def calculate_raman_term_silica(domain):
+    """
+    :param object domain: A domain
+    :return: Raman response function
+    :rtype: double
+
+    Calculate raman response function according by Multiple-vibrational-mode model [1].
+    The function is normalized such that its integral is unity [2].
+
+    [1] D. Hollenbeck and C. D. Cantrell, JOSA B 19, 2886 (2002) doi: 10.1364/JOSAB.19.002886
+    [2] R. H. Stolen et al, JOSA B 6, 1159 (1989) doi: 10.1364/JOSAB.6.001159
+    """
+    CP = [56.25, 100.00, 231.25, 362.50, 463.00, 497.00, 611.50, 691.67, 793.67, 
+            835.50, 930.00, 1080.00, 1215.00]
+    Ai = [1.00, 11.40, 36.67, 67.67, 74.00, 4.50, 6.80, 4.60, 4.20, 4.50, 2.70, 3.10, 3.00]
+    Gfwhm = [52.10, 110.42, 175.00, 162.50, 135.33, 24.50, 41.50, 155.00, 59.50,
+            64.30, 150.00, 91.00, 160.00]
+    Lfwhm = [17.37, 38.81, 58.33, 54.17, 45.11, 8.17, 13.83, 51.67, 19.83, 21.43, 50.00, 30.33, 53.33]
+
+    t = domain.t - domain.t.min() #shift starting point to zero
+    h_R = np.zeros_like(t)
+    for i in range(13):
+        h_R += Ai[i] * \
+                np.exp(-np.pi * 1e-10 * constants.c * Lfwhm[i] * t) * \
+                np.exp(-(np.pi * 1e-10 * constants.c * Gfwhm[i]) ** 2 * (t ** 2) / 4.) * \
+                np.sin(2 * np.pi * 1e-10 * constants.c * CP[i] * t)
+
+    norm = integrate.simps(h_R, domain.t)
+    return h_R/norm
 
 
 class Nonlinearity(object):
@@ -122,17 +161,28 @@ class Nonlinearity(object):
         self.centre_omega = domain.centre_omega
         self.omega = fftshift(domain.omega - domain.centre_omega)
 
-        if self.self_steepening:
+        if self.self_steepening is False:
+            self.ss_factor = 0.0
+        elif self.self_steepening is True:
             self.ss_factor = 1.0 / self.centre_omega
         else:
-            self.ss_factor = 0.0
+            self.ss_factor = float(self.self_steepening)
 
-        if self.use_all:
+        if self.use_all is False:
+            self.h_R = 0.0
+        elif self.use_all is True or self.use_all.lower() == "blowwood": # use Blow Wood model by default
             # Require h_R in spectral domain, so take FFT of returned value:
             self.h_R = fft(calculate_raman_term(
                 domain, self.tau_1, self.tau_2))
+        elif self.use_all.lower() == "hollenbeck": # use Hollenbeck and Cantrell multiple-vibrational-mode model
+            self.h_R = fft(calculate_raman_term_silica(domain))
         else:
-            self.h_R = 0.0
+            raise UnknownRamanResponseError(
+                    "Use False, True or a sting from the list [\"blowwood\", \"hollenbeck\"]")
+
+        # note: domain.window_t is added according to the case of Periodic convolution
+        # https://en.wikipedia.org/wiki/Convolution_theorem
+        self.h_R *= domain.window_t
 
         self.generate_nonlinearity()
 
@@ -155,17 +205,22 @@ class Nonlinearity(object):
         term_spm = np.abs(A) ** 2
         convolution = ifft(self.h_R * fft(term_spm))
         p = fft(A * (1.0 - self.f_R) * term_spm + self.f_R * A * convolution)
-
-        return ifft(self.factor * (1.0 + self.omega * self.ss_factor) * p)
+        
+        return ifft(self.factor * (1.0 + self.omega * self.ss_factor) * p) # 1j * -1j = 1
 
     def default_exp_f_all(self, A, h, B):
         """ Set all terms within an exponential factor. """
         term_spm = np.abs(A) ** 2
         convolution = ifft(self.h_R * fft(term_spm))
-        p = fft((1.0 - self.f_R) * term_spm + self.f_R * convolution)
+        #p = fft(A * (1.0 - self.f_R) * term_spm + self.f_R * A * convolution)
+        term_all = (1.0 - self.f_R) * term_spm + self.f_R * convolution
+        
+        term_ss_all = np.where(np.abs(B) > 1e-15, self.ss_factor / B, 0.0) * ifft(self.omega * fft(term_all * A))
 
-        return np.exp(h * ifft(self.factor *
-                      (1.0 + self.omega * self.ss_factor) * p)) * B
+        #return np.exp(h * ifft(self.factor *
+        #              (1.0 + self.omega * self.ss_factor) * p)) * B
+        # TODO gamma can only be a constant!!!
+        return np.exp(h * self.factor * (term_all + term_ss_all)) * B
 
     def default_f_with_ss(self, A, z):
         """ Use self-steepening only. """
