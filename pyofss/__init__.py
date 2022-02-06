@@ -52,7 +52,7 @@ from .modules.static_pump_wdm import StaticPumpWDM
 try:
     from .modules.opencl_fibre import OpenclFibre
 except ImportError:
-    pass
+    print("OpenclFibre is not activated, check if pyopencl and reikna modules are installed")
 
 # Import helper functions
 from .domain import nu_to_omega, nu_to_lambda
