@@ -35,4 +35,14 @@ Not started:
 7-15
 7-16
 7-17
+--------------------------------------------------------------------------------
+fopo_cars contains simulation of picosecond fiber optical parametric oscillator
+in one point using RK4IP method realized in OpenclFibre module. The simulation
+can be compared to those in the papers:
+1. V. Efremov, A. Antropov, E. Evmenova, and D. Kharenko, "Numerical simulation
+  of a picosecond fiber optical parametric oscillator based on a PCF," in Proc.
+  SPIE, (SPIE, 2021), Vol. 11905, p. 119051L, doi: 10.1117/12.2601314
+2. V. Efremov, A. Antropov, E. Evmenova, and D. Kharenko, "Numerical investigation
+  of energy limit in picosecond fiber optical parametric oscillator," 
+  (submitted in Appl. Opt.)
 ================================================================================
