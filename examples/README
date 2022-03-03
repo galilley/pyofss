@@ -24,6 +24,7 @@ Complete:
 7-2, 7-6, 7-7, 7-8, 7-9
 
 Todo:
+12-21 -> related to noise and Dudley, Coen, IEEE JSQE 8 2002
 
 Not started:
 3-2 -> require broadening factor and chirp parameter plots.
@@ -36,13 +37,20 @@ Not started:
 7-16
 7-17
 --------------------------------------------------------------------------------
+dudley_sc contains simulations where Raman and self-steepening therms play a key
+role (Raman self-frequency shift and supercontinuum generation). Examples were 
+taken from the article of J. M. Dudley et al:
+[1] J. M. Dudley, G. Genty, and S. Coen, "Supercontinuum generation in 
+  photonic crystal fiber," Rev. Mod. Phys. 78(4), 1135 (2006), 
+  doi: 10.1103/RevModPhys.78.1135
+--------------------------------------------------------------------------------
 fopo_cars contains simulation of picosecond fiber optical parametric oscillator
 in one point using RK4IP method realized in OpenclFibre module. The simulation
 can be compared to those in the papers:
-1. V. Efremov, A. Antropov, E. Evmenova, and D. Kharenko, "Numerical simulation
+[1] V. Efremov, A. Antropov, E. Evmenova, and D. Kharenko, "Numerical simulation
   of a picosecond fiber optical parametric oscillator based on a PCF," in Proc.
   SPIE, (SPIE, 2021), Vol. 11905, p. 119051L, doi: 10.1117/12.2601314
-2. V. Efremov, A. Antropov, E. Evmenova, and D. Kharenko, "Numerical investigation
-  of energy limit in picosecond fiber optical parametric oscillator," 
-  (submitted in Appl. Opt.)
+[2] V. Efremov, A. Antropov, E. Evmenova, and D. Kharenko, "Numerical investiga-
+  tion of energy limit in picosecond fiber optic parametric oscillator," 
+  Appl. Opt. 61(7), 1806 (2022), doi: 10.1364/AO.449775
 ================================================================================
