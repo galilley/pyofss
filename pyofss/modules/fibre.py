@@ -74,6 +74,7 @@ class Fibre(object):
         self.nonlinearity = Nonlinearity(gamma, sim_type, self_steepening,
                                          raman_scattering, rs_factor,
                                          use_all, tau_1, tau_2, f_R)
+        self.domain = None
 
         class Function():
             """ Class to hold linear and nonlinear functions. """
@@ -92,8 +93,12 @@ class Fibre(object):
                                self.length, total_steps)
 
     def __call__(self, domain, field):
-        self.linearity(domain)
-        self.nonlinearity(domain)
+        if self.domain != domain or \
+                self.linearity.factor is None or \
+                self.nonlinearity.factor is None:
+            self.linearity(domain)
+            self.nonlinearity(domain)
+            self.domain = domain
 
         # Set temporal and spectral arrays for storage:
         self.stepper.storage.t = domain.t

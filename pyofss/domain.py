@@ -183,9 +183,9 @@ class Domain(object):
             raise OutOfRangeError(
                 "bit_width is out of range. Must be in (0.01, 10000.0)")
 
-        if not (185.0 < centre_nu < 600.0):
+        if not (140.0 < centre_nu < 600.0):
             raise OutOfRangeError(
-                "centre_nu is out of range. Must be in (185.0, 600.0)")
+                "centre_nu is out of range. Must be in (140.0, 600.0)")
 
         if not (0 < channels < 3):
             raise OutOfRangeError(
@@ -251,6 +251,14 @@ class Domain(object):
             Domain.vacuum_light_speed * self.window_nu / (self.centre_nu ** 2)
 
         self.channels = channels
+
+    def __eq__(self, obj):
+        return isinstance(obj, Domain) and \
+                obj.total_bits == self.total_bits and \
+                obj.samples_per_bit == self.samples_per_bit and \
+                obj. bit_width == self.bit_width and \
+                obj.centre_nu == self.centre_nu and \
+                obj.channels == self.channels
 
     def __str__(self):
         """

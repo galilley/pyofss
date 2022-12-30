@@ -56,4 +56,5 @@ class Modulation(object):
         P = temporal_power(field)
         self.g = self.rho_max - ((P/self.Pcr - 1.)**2) * (self.rho_max - self.rho_min)
         self.g = np.where(self.g < self.rho_min, self.rho_min, self.g)
+        self.g = np.sqrt( self.g )
         return field * self.g
