@@ -173,16 +173,16 @@ def generate_overview_plots(domain):
     """ Generate single, map, and waterfall plots of the soliton collision. """
     system = System(domain)
     system.add(Sech(peak_power=8.8e-3, width=(1.0 / 0.44),
-                    position=0.625))
+                    position=0.125))
     system.add(Sech(peak_power=8.8e-3, width=(1.0 / 0.44),
-                    position=0.375, offset_nu=-0.8))
+                    position=-0.125, offset_nu=-0.8))
     system.add(Fibre(length=400.0, beta=[0.0, 0.0, -0.1, 0.0],
                      gamma=2.2, total_steps=400, traces=100,
                      method='ARK4IP', local_error=1e-6))
     system.run()
 
     storage = system['fibre'].stepper.storage
-    (x, y, z) = storage.get_plot_data(reduced_range=(140.0, 360.0))
+    (x, y, z) = storage.get_plot_data(reduced_range=(-110.0, 110.0))
 
     # Split step_sizes (list of tuples) into separate lists;
     # distances and steps:
@@ -204,7 +204,8 @@ if __name__ == "__main__":
 
     methods = ["ass_simple", "ass_symmetric", "ass_reduced",
                "ass_agrawal", "ass_sym_midpoint", "ass_sym_rk4", "ark4ip"]
-    target_errors = np.logspace(-1, -12, 12)
+    #target_errors = np.logspace(-1, -12, 12)
+    target_errors = np.logspace(-1, -7, 7)
 
     data_directory = "data_soliton_collision"
 

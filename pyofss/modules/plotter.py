@@ -199,7 +199,7 @@ def single_plot(x, y, x_label="", y_label="", label="",
     if y_range is not None:
         ax1.set_ylim(y_range)
 
-    if label is not "":
+    if label != "":
         ax1.legend()
 
     if filename:

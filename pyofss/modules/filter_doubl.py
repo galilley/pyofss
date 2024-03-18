@@ -138,7 +138,7 @@ class Filter_doubl(object):
             self.field *= self.shape
 
         # convert field back to temporal domain:
-        if self.type is "reflected":
+        if self.type == "reflected":
             return ifft(self.field)
         else:
             return field - ifft(self.field)

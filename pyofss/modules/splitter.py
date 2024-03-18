@@ -21,13 +21,13 @@
 
 import numpy as np
 
-class Splitter( object ):
 
-    def __init__(self, name="splitter", loss = 0.0):
+class Splitter(object):
+
+    def __init__(self, name="splitter", loss=0.0):
         # TODO negative values should be represent as dB
         self.name = name
         self.loss = loss
 
     def __call__(self, domain, field):
         return np.sqrt(1.0 - self.loss)*field
-
