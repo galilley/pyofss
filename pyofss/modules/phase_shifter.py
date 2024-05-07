@@ -1,6 +1,5 @@
-
 """
-    Copyright (C) 2021 Denis Kharenko
+    Copyright (C) 2023 Vladislav Efremov, Denis Kharenko
 
     This file is part of pyofss 2.0.
 
@@ -19,30 +18,23 @@
 """
 
 import numpy as np
-from pyofss.field import fft, ifft
 
-from .linearity import Linearity
 
-class Dispersion(object):
-
-    def __init__(self, name = 'disp', channel = 0,
-                 beta=None, centre_omega=None):
-        """
-        :param array_like beta: Array of dispersion parameters
-
-        Simply module provides dispersion shift
-        """
+class Phase_shifter(object):
+    def __init__(self, name='ph_shifter', channel=0,
+                 phase=None):
         self.name = name
         self.channel = channel
-        self.linearity = Linearity(
-                beta=beta, centre_omega=centre_omega)
+        self.phase = phase
+
+        self.field = None
 
     def __call__(self, domain, field):
-        factor = self.linearity(domain)
-        A = field.copy()
-        if domain.channels > 1:
-            A[self.channel] = ifft( np.exp(factor) * fft(A[self.channel]) )
+        self.field = field.copy()
+        factor = self.phase*1j
+        if domain.channels > 0:
+            self.field[self.channel] = np.exp(factor) * (self.field[self.channel])
         else:
-            A = ifft( np.exp(factor) * fft(A) )
-        return A
+            self.field = np.exp(factor) * self.field
+        return self.field
 

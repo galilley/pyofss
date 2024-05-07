@@ -1,6 +1,6 @@
 
 """
-    Copyright (C) 2011, 2012  David Bolt
+    Copyright (C) 2011, 2012  David Bolt, 2023 Vladislav Efremov
 
     This file is part of pyofss.
 
@@ -97,7 +97,7 @@ class Stepper(object):
         self.total_steps = total_steps
 
         # Use a list of tuples ( z, A(z) ) for dense output if required:
-        self.storage = Storage()
+        self.storage = Storage(self.length, self.traces)
 
         # Store constants for adaptive method:
         self.total_attempts = 100
@@ -112,6 +112,7 @@ class Stepper(object):
         self.eta = self.solver.errors[self.method.lower()]
 
         self.A_out = None
+        
 
     def __call__(self, A):
         """ Delegate to appropriate function, adaptive- or standard-stepper """
@@ -130,20 +131,13 @@ class Stepper(object):
 
         # Initialise:
         self.A_out = A
+        self.storage.append(0.0, self.A_out)
 
         # Require an initial step-size:
         h = self.length / self.total_steps
 
         # Construct mesh points for z:
         zs = np.linspace(0.0, self.length, self.total_steps + 1)
-
-        # Construct mesh points for traces:
-        if self.traces != self.total_steps:
-            trace_zs = np.linspace(0.0, self.length, self.traces + 1)
-
-        # Make sure to store the initial A if more than one trace is required:
-        if self.traces != 1:
-            self.storage.append(zs[0], self.A_out)
 
         # Start at z = 0.0 and repeat until z = length - h (inclusive),
         # i.e. z[-1]
@@ -154,18 +148,10 @@ class Stepper(object):
             else:
                 self.A_out = self.step(self.A_out, z, h)
             # Now at L = z + h
-
-            # If multiple traces required, store A_out at each relavant z
-            # value:
-            if self.traces != 1:
-                self.storage.append(z + h, self.A_out)
+            self.storage.append(z + h, self.A_out)
 
         # Store total number of fft and ifft operations that were used:
         self.storage.store_current_fft_count()
-
-        # Need to interpolate dense output to grid points set by traces:
-        if self.traces > 1 and (self.traces != self.total_steps):
-            self.storage.interpolate_As_for_z_values(trace_zs)
 
         return self.A_out
 
@@ -188,6 +174,10 @@ class Stepper(object):
 
     def adaptive_stepper(self, A):
         """ Take multiple steps, with variable length, until target reached """
+        
+        #### Статья, где хорошо объясняется адпативный шаг, а также
+        #### исследуется его модифицированая версия:
+        #### DOI:10.1109/JLT.2009.2021538
 
         #~print( "Starting ODE integration with adaptive step-size... " ),
 
@@ -195,11 +185,7 @@ class Stepper(object):
         self.A_out = A
         z = 0.0
 
-        # Require an initial step-size which will be adapted by the routine:
-        if self.traces > self.total_steps:
-            h = self.length / self.traces
-        else:
-            h = self.length / self.total_steps
+        h = self.length / self.total_steps
 
         # Constants used for approximation of solution using local
         # extrapolation:
@@ -207,15 +193,7 @@ class Stepper(object):
         f_alpha = f_eta / (f_eta - 1.0)
         f_beta = 1.0 / (f_eta - 1.0)
 
-        # Calculate z-values at which to save traces.
-        if self.traces > 1:
-            # zs contains z-values for each trace, as well as the initial
-            # trace:
-            zs = np.linspace(0.0, self.length, self.traces + 1)
-
-        # Store initial trace:
-        if self.traces != 1:
-            self.storage.append(z, self.A_out)
+        self.storage.append(z, self.A_out)
 
         # Limit the number of steps in case of slowly converging runs:
         for s in range(1, self.steps_max):
@@ -273,11 +251,7 @@ class Stepper(object):
                     # Store data on current z and stepsize used for each
                     # succesful step:
                     self.storage.step_sizes.append((z, h_temp))
-
-                    # Most dense storage (stores a trace for each successful
-                    # step):
-                    if self.traces != 1:
-                        self.storage.append(z, self.A_out)
+                    self.storage.append(z, self.A_out)
 
                     break  # Successful attempt at step, move on to next step.
 
@@ -294,10 +268,6 @@ class Stepper(object):
             if z >= self.length:
                 # Store total number of fft and ifft operations that were used:
                 self.storage.store_current_fft_count()
-
-                # Interpolate dense output to uniformly-spaced z values:
-                if self.traces > 1:
-                    self.storage.interpolate_As_for_z_values(zs)
 
                 return self.A_out
 

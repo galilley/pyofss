@@ -25,5 +25,9 @@ doc/_templates/
 .*~
 *.swp
 *.swo
+*.orig
 
+# Results of examples
+examples/*/*.png
+examples/*/data/*
 

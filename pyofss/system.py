@@ -31,11 +31,11 @@ import numpy as np
 from .domain import Domain
 
 
-def field_save(field, filename = 'field_out'):
+def field_save(field, filename='field_out'):
     np.savez_compressed(filename, field=field)
 
 
-def field_load(filename = 'field_out'):
+def field_load(filename='field_out'):
     if filename.endswith(".npz"):
         d = np.load(filename)['field']
     elif filename.endswith(".npy"):
@@ -43,9 +43,10 @@ def field_load(filename = 'field_out'):
     else:
         try:
             d = np.load(filename + '.npz')['field']
-        except:
+        except FileNotFoundError:
             d = np.load(filename + '.npy')
     return d
+
 
 class System(object):
     """
@@ -73,8 +74,8 @@ class System(object):
         Clear (remove) all modules if requested.
         """
         if(self.domain.channels > 1):
-            self.field = [np.zeros([self.domain.total_samples], complex)
-                          for channel in range(self.domain.channels)]
+            self.field = np.zeros(self.domain.total_samples*self.domain.channels, complex
+                                  ).reshape(self.domain.channels, self.domain.total_samples)
         else:
             self.field = np.zeros([self.domain.total_samples], complex)
 

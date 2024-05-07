@@ -123,6 +123,7 @@ class Fibre(object):
         """ Nonlinear term in exponential factor. """
         return self.nonlinearity.exp_non(A, h, B)
 
+
 if __name__ == "__main__":
     """
     Plot the result of a Gaussian pulse propagating through optical fibre.
@@ -141,10 +142,10 @@ if __name__ == "__main__":
     gaussian = Gaussian(peak_power=1.0, width=1.0)
 
     P_ts = []
-    methods = ['ss_simple', 
-            'ss_symmetric', 'ss_symmetric+ss', 'ss_symmetric+raman',  'ss_symmetric+all',  
-            'ss_sym_rk4', 
-            'rk4ip', 'rk4ip+ss', 'rk4ip+raman', 'rk4ip+all']
+    methods = ['ss_simple',
+               'ss_symmetric', 'ss_symmetric+ss', 'ss_symmetric+raman', 'ss_symmetric+all',
+               'ss_sym_rk4',
+               'rk4ip', 'rk4ip+ss', 'rk4ip+raman', 'rk4ip+all']
 
     for m in methods:
         sys = System(domain)

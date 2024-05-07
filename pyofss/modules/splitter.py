@@ -24,10 +24,16 @@ import numpy as np
 
 class Splitter(object):
 
-    def __init__(self, name="splitter", loss=0.0):
+    def __init__(self, name="splitter", channel=0, loss=0.0):
         # TODO negative values should be represent as dB
         self.name = name
         self.loss = loss
+        self.channel = channel
 
     def __call__(self, domain, field):
-        return np.sqrt(1.0 - self.loss)*field
+        A = field.copy()
+        if domain.channels > 1:
+            A[self.channel] = np.sqrt(1.0 - self.loss)*field[self.channel]
+        else:
+            A = np.sqrt(1.0 - self.loss)*field
+        return A

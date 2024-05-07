@@ -1,6 +1,6 @@
 
 """
-    Copyright (C) 2012  David Bolt
+    Copyright (C) 2012  David Bolt, 2023 Vladislav Efremov
 
     This file is part of pyofss.
 
@@ -19,10 +19,18 @@
 """
 
 import numpy as np
+import math
+
+from scipy.interpolate import interpn
 
 from pyofss import field
 from pyofss.field import temporal_power
 from pyofss.field import spectral_power
+
+try:
+    import pyopencl.array as pycl_array
+except ImportError:
+    print("OpenCL is not activated, Storage will work with NumPy arrays only")
 
 
 def reduce_to_range(x, ys, first_value, last_value):
@@ -74,10 +82,23 @@ class Storage(object):
     Contains A arrays for multiple z values. Also contains t array and
     functions to modify the stored data.
     """
-    def __init__(self):
+    def __init__(self, length, traces):
+        self.length = length
+        self.traces = traces
+        self.trace_zs = []
+        if self.traces < 1:
+            self.trace_zs = 2*[length]
+        elif self.traces == 1:
+            self.trace_zs = [length]
+        else:
+            self.trace_zs = np.linspace(0.0, self.length, self.traces + 1)
+        self.trace_n = 0
         self.t = []
         self.As = []
         self.z = []
+
+        self.buff_As = []
+        self.buff_z = []
 
         self.nu = []
 
@@ -88,6 +109,7 @@ class Storage(object):
         self.fft_total = 0
 
     def reset_array(self):
+        self.trace_n = 0
         self.As = []
         self.z = []
 
@@ -100,6 +122,14 @@ class Storage(object):
         """ Store current value of the global variable in the field module. """
         self.fft_total = field.fft_counter
 
+    def get_A(self, A):
+        if isinstance(A, np.ndarray):
+            return A
+        elif isinstance(A, pycl_array.Array):
+            return A.get()
+        else:
+            raise TypeError("unsupported type {} is stored".format(type(A)))
+
     def append(self, z, A):
         """
         :param double z: Distance along fibre
@@ -107,8 +137,42 @@ class Storage(object):
 
         Append current fibre distance and field to stored array
         """
-        self.z.append(z)
-        self.As.append(A)
+        if self.traces < 1:
+            self.z.append(z)
+            self.As.append(self.get_A(A))
+        # Проверяем, совпадает ли текущая длина с точкой сохранения
+        # если совпадает, сохраняем поле, переходим к следующей точке сохранения
+        # и добавляем в буффер
+        elif math.isclose(self.trace_zs[self.trace_n], z):
+            self.trace_n += 1
+
+            self.z.append(z)
+            self.As.append(self.get_A(A))
+
+            self.buff_z = [z]
+            self.buff_As = [self.get_A(A)]
+        # если не совпадает, проверяем, не прошли ли точку сохранения
+        # если прошли, далаем интерполяцию на основе буффера
+        # сохраняем последние значения из него и переходим к след. точке сохранения
+        elif self.trace_zs[self.trace_n] < z:
+            self.buff_z.append(z)
+            self.buff_As.append(self.get_A(A))
+
+            # проверяем, есть ли ещё точки сохранения, которые мы перешагнули
+            zs = [zs for zs in self.trace_zs[self.trace_n:] if zs < z]
+            self.trace_n = np.where(np.isclose(self.trace_zs, zs[-1]))[0][0]
+
+            self.interpolate_As_for_z_values(zs)
+
+            self.buff_z = [self.buff_z[-1]]
+            self.buff_As = [self.buff_As[-1]]
+
+            self.trace_n += 1
+        # если не прошли точку сохранения, отправляем текущие значения в буффер
+        # и идём дальше
+        elif self.traces != 1:
+            self.buff_z.append(z)
+            self.buff_As.append(self.get_A(A))
 
     def get_plot_data(self, is_temporal=True, reduced_range=None,
                       normalised=False, channel=None):
@@ -146,7 +210,7 @@ class Storage(object):
         if reduced_range is not None:
             x, y = reduce_to_range(x, y, reduced_range[0], reduced_range[1])
 
-        z = self.z
+        z = np.array(self.z)
 
         return (x, y, z)
 
@@ -173,9 +237,9 @@ class Storage(object):
         # As[0] = [ [A_0, B_0], [A_1, B_1], ... , [A_N-1, B_N-1] ]
         # rather than just a list of (non-iterable) elements, e.g.
         # As[0] = [ A_0, A_1, ... , A_N-1 ]
-        if isinstance(self.As[0][0], collections.Iterable):
+        if isinstance(self.buff_As[0][0], collections.Iterable):
             # Separate into channel_0 As and channel_1 As:
-            As_c0, As_c1 = list(zip(*self.As))
+            As_c0, As_c1 = list(zip(*self.buff_As))
 
             As_c0 = self.interpolate_As(zs, As_c0)
             As_c1 = self.interpolate_As(zs, As_c1)
@@ -183,10 +247,10 @@ class Storage(object):
             # Interleave elements from both channels into a single array:
             self.As = list(zip(As_c0, As_c1))
         else:
-            self.As = self.interpolate_As(zs, self.As)
+            self.As.extend(self.interpolate_As(zs, self.buff_As))
 
         # Finished using original z; can now overwrite with new values (zs):
-        self.z = zs
+        self.z.extend(zs)
 
     def interpolate_As(self, zs, As):
         """
@@ -198,27 +262,90 @@ class Storage(object):
         Interpolate array of A values, stored at non-uniform z-values, over a
         uniform array of new z-values (zs).
         """
-        from scipy import interpolate
-        IUS = interpolate.InterpolatedUnivariateSpline
-
+        from scipy.interpolate import barycentric_interpolate, pchip_interpolate
         As = np.array(As)
-
         if As[0].dtype.name.startswith('complex'):
-            # If using complex data, require separate interpolation functions
-            # for the real and imaginary parts. This is due to the used
-            # routine being unable to process complex data type:
-            functions = [(IUS(self.z, np.real(A)), IUS(self.z, np.imag(A)))
-                         for A in As.transpose()]
-            As = np.vstack(np.array(f(zs) + 1j * g(zs))
-                           for f, g in functions).transpose()
+            As1_r = barycentric_interpolate(self.buff_z, np.real(As), zs)
+            As1_i = barycentric_interpolate(self.buff_z, np.imag(As), zs)
+            As = As1_r + 1j*As1_i
         else:
-            # Generate the interpolation functions for each column in As. This
-            # is achieved by first transposing As, then calculating the
-            # interpolation function for each row.
-            functions = [IUS(self.z, A) for A in As.transpose()]
-            # Apply the functions to the new z array (zs), stacking together
-            # the resulting arrays into columns. Transpose the array of
-            # columns to recover the final As:
-            As = np.vstack(f(zs) for f in functions).transpose()
-
+            As = barycentric_interpolate(self.buff_z, As, zs)
         return As
+
+
+if __name__ == "__main__":
+    # Compare simulations using Fibre and OpenclFibre modules.
+    from pyofss import Domain, System, Gaussian, Fibre
+    from pyofss import multi_plot, double_plot, labels
+
+    import time
+    import matplotlib.pyplot as plt
+
+    domain = Domain(bit_width=200.0, total_bits=8, samples_per_bit=512 * 32)
+    gaussian = Gaussian(peak_power=1.0, width=1.0)
+
+    traces = np.arange(7, 201, 11)
+
+    fibers = {f'{key}': Fibre(
+                         length=20,
+                         method='rk4ip',
+                         total_steps=200,
+                         traces=key,
+                         beta=[0.0, 0.0, 0.0, 1.0],
+                         gamma=1.5,
+                         use_all='hollenbeck'
+                         ) for key in traces}
+
+    dur = []
+    max_rel_err = []
+    A_t = {}
+
+    for numb in traces:
+        sys = System(domain)
+        sys.add(gaussian)
+        sys.add(fibers[f'{numb}'])
+
+        start = time.time()
+        sys.run()
+        stop = time.time()
+
+        dur.append(stop - start)
+        stor = fibers[f'{numb}'].stepper.storage
+        A1 = stor.As[-int(numb/2)]
+        A_t[f'{numb}'] = temporal_power(A1)
+        z1 = stor.z[-int(numb/2)]
+        print(z1)
+
+        fiber0 = Fibre(length=z1, method='rk4ip', total_steps=300, traces=1,
+                       beta=[0.0, 0.0, 0.0, 1.0], gamma=1.5, use_all='hollenbeck')
+        sys0 = System(domain)
+        sys0.add(gaussian)
+        sys0.add(fiber0)
+        sys0.run()
+        A_t0 = temporal_power(sys0.field)
+
+        DELTA_POWER = A_t0 - A_t[f'{numb}']
+
+        MEAN_RELATIVE_ERROR = np.mean(np.abs(DELTA_POWER))
+        MEAN_RELATIVE_ERROR /= np.max(A_t0)
+
+        MAX_RELATIVE_ERROR = np.max(np.abs(DELTA_POWER))
+        MAX_RELATIVE_ERROR /= np.max(A_t0)
+        max_rel_err.append(MAX_RELATIVE_ERROR)
+        print(f"Run time with {numb} traces: {dur[-1]}")
+        print(f"Mean relative error: {MEAN_RELATIVE_ERROR}")
+        print(f"Max relative error: {MAX_RELATIVE_ERROR}")
+
+    fig = plt.figure()
+    ax1 = fig.add_subplot(211)
+    ax1.plot(traces, dur, 'g-.', label='Duration')
+    ax2 = fig.add_subplot(212)
+    ax2.plot(traces, max_rel_err, "r-s", label='Max relative err')
+    ax2.set_ylabel('Max relative err')
+    ax2.set_xlabel('Traces')
+
+    ax1.set_xlabel('Traces')
+    ax1.set_ylabel('Duration, sec')
+    plt.tight_layout()
+
+    plt.savefig('trace_comp')

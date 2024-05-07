@@ -53,4 +53,12 @@ can be compared to those in the papers:
 [2] V. Efremov, A. Antropov, E. Evmenova, and D. Kharenko, "Numerical investiga-
   tion of energy limit in picosecond fiber optic parametric oscillator," 
   Appl. Opt. 61(7), 1806 (2022), doi: 10.1364/AO.449775
+--------------------------------------------------------------------------------
+rds_1p7 contains simulation of Raman Dissipative Soliton generation near 1.7 mkm
+by synchronous pumping of the external passive cavity in one point using RK4IP
+method realized in OpenclFibre module. The simulation can be compared to those
+in the paper:
+[1] I. Zhdanov, V. Volosi et al., “Raman dissipative soliton source of ultrashort
+  pulses in NIR-III spectral window,” Opt. Express, 31(21), 35156 (2023),
+  doi: 10.1364/OE.499249
 ================================================================================

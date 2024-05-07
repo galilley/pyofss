@@ -21,6 +21,7 @@
 from scipy import power, sqrt
 from pyofss.field import fft, ifft
 from pyofss.field import energy
+import numpy as np
 
 
 class Amplifier_ch(object):
@@ -97,7 +98,6 @@ class Amplifier_ch_numb(object):
 
         self.field *= self.ampl_main.sqrt_G
         if self.numb_ch > 1:
-            return [field[0], ifft(self.field)]
+            return np.array([field[0], ifft(self.field)])
         else:
-            return [ifft(self.field), field[1]]
-
+            return np.array([ifft(self.field), field[1]])

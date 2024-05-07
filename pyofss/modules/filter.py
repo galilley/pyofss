@@ -18,7 +18,7 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-from numpy import exp, abs
+from numpy import exp, abs, sqrt
 # Functions are deprecated and will be removed in SciPy 2.0.0
 try:
     from numpy.lib.scimath import power, log
@@ -27,6 +27,7 @@ except ImportError:  #try import old syntax for compatibility reason
 
 from pyofss.field import fft, ifft, ifftshift
 
+import numpy as np
 
 # Define exceptions
 class FilterError(Exception):
@@ -58,7 +59,8 @@ class Filter(object):
     FWHM bandwidth will be converted on initialisation.
     """
     def __init__(self, name="filter", width_nu=0.1, offset_nu=0.0,
-                 m=1, channel=0, using_fwhm=False, type_filt = "reflected"):
+                 m=1, channel=0, using_fwhm=False,
+                 frac = 1.0, type_filt = "reflected"):
 
         if not (1e-6 < width_nu < 1e3):
             raise OutOfRangeError(
@@ -89,6 +91,7 @@ class Filter(object):
         self.channel = channel
         self.fwhm_nu = None
         self.type = type_filt
+        self.fraction = frac
 
         # For a FWHM filter width, store then convert to a HWIeM filter width:
         if using_fwhm:
@@ -118,7 +121,7 @@ class Filter(object):
         delta_nu = domain.nu - domain.centre_nu - self.offset_nu
         factor = power(delta_nu / self.width_nu, (2 * self.m))
         # Frequency values are in order, inverse shift to put in fft order:
-        self.shape = exp(-0.5 * ifftshift(factor))
+        self.shape = sqrt(self.fraction)*exp(-0.5 * ifftshift(factor))
 
         if domain.channels > 1:
             # Filter is applied only to one channel:

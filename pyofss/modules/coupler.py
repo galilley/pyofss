@@ -23,20 +23,34 @@ from pyofss.field import fft, ifft
 
 class Coupler(object):
     """
-    Symmetric fiber coupler 2*2
+    Fiber coupler 2*2
     """
 
-    def __init__(self, name='coupler'):
+    def __init__(self, ratio = [50, 50], name='coupler', invers = False):
         self.name = name
         self.field = None
+        self.invers = invers
+
+        if sum(ratio) != 100:
+            raise Exception("The sum from the outputs is not equal to 100 %.")
+        self.k = np.arctan( np.sqrt( ratio[1]/ratio[0] ) )
+
 
     def __call__(self, domain, field):
         self.field = fft(field)
-        self.field = ifft(self.matrix_oper(self.field[0], self.field[1]))
+        if self.invers is False:
+            self.field = ifft(self.matrix_oper(self.field[0], self.field[1]))
+        else:
+            self.field = ifft(self.matrix_oper_invers(self.field[0], self.field[1]))
         return self.field
 
     def matrix_oper(self, field_in1, field_in2):
-        field_out1 = sqrt(2.0)/2.0*(field_in1 + 1j*field_in2)
-        field_out2 = sqrt(2.0)/2.0*(1j*field_in1 + field_in2)
-        return [field_out1, field_out2]
+        field_out1 = field_in1*np.cos(self.k) + 1j*field_in2*np.sin(self.k)
+        field_out2 = 1j*field_in1*np.sin(self.k) + field_in2*np.cos(self.k)
+        return np.array([field_out1, field_out2])
+
+    def matrix_oper_invers(self, field_in1, field_in2):
+        field_out1 = field_in1*np.cos(self.k) - 1j*field_in2*np.sin(self.k)
+        field_out2 = -1j*field_in1*np.sin(self.k) + field_in2*np.cos(self.k)
+        return np.array([field_out1, field_out2])
 

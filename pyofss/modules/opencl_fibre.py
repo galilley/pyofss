@@ -1,7 +1,7 @@
 
 """
     Copyright (C) 2013 David Bolt,
-    2020-2021 Vladislav Efremov, Denis Kharenko
+    2020-2021, 2023 Vladislav Efremov, Denis Kharenko
 
     This file is part of pyofss.
 
@@ -24,6 +24,8 @@ import numpy as np
 import pyopencl as cl
 import pyopencl.array as cl_array
 
+from scipy import linalg
+
 import sys as sys0
 version_py = sys0.version_info[0]
 if version_py == 3:
@@ -35,6 +37,7 @@ from string import Template
 
 from .linearity import Linearity
 from .nonlinearity import Nonlinearity
+from .storage import Storage
 
 OPENCL_OPERATIONS = Template("""
     #ifdef cl_khr_fp64 // Khronos extension
@@ -54,6 +57,14 @@ OPENCL_OPERATIONS = Template("""
         int gid = get_global_id(0);
 
         factor[gid] = c${dorf}_exp(c${dorf}_mulr(factor[gid], stepsize));
+    }
+    
+    __kernel void cl_factor(__global c${dorf}_t* buf_factor,
+                           __global c${dorf}_t* factor,
+                           const ${dorf} stepsize) {
+        int gid = get_global_id(0);
+
+        buf_factor[gid] = c${dorf}_exp(c${dorf}_mulr(factor[gid], stepsize));
     }
 
     __kernel void cl_linear_cached(__global c${dorf}_t* field,
@@ -81,6 +92,12 @@ OPENCL_OPERATIONS = Template("""
     __kernel void cl_square_abs2(__global c${dorf}_t* field) {
         int gid = get_global_id(0);
         field[gid] = c${dorf}_new(c${dorf}_abs_squared(field[gid]), (${dorf})0.0f);
+    }
+
+    __kernel void cl_norm(__global c${dorf}_t* field,
+                          __global c${dorf}_t* err) {
+        int i = get_global_id(0);
+        err[i] = c${dorf}_mul(field[i], c${dorf}_conj(field[i]));
     }
 
     __kernel void cl_nonlinear(__global c${dorf}_t* field,
@@ -169,7 +186,57 @@ OPENCL_OPERATIONS = Template("""
             im_gamma, field[gid]);
     }
 
+    __kernel void cl_split(__global c${dorf}_t* field,
+                        __global c${dorf}_t* subfield1, __global c${dorf}_t* subfield2,
+                        const int n)
+    {
+        int gid = get_global_id(0);
+        if (gid < n)
+        {
+            subfield1[gid] = field[gid];
+        }
+        else
+        {
+            subfield2[gid-n] = field[gid];
+        }
+    }
+
+    __kernel void cl_couple(__global c${dorf}_t* field,
+                        __global c${dorf}_t* subfield1, __global c${dorf}_t* subfield2,
+                        const int n)
+    {
+        int gid = get_global_id(0);
+        if (gid < n)
+        {
+            field[gid] = subfield1[gid];
+        }
+        else
+        {
+            field[gid] = subfield2[gid-n];
+        }
+    }
+
 """)
+
+errors = {"cl_ss_symmetric": 3,
+          "cl_ss_sym_rk4": 5, "cl_rk4ip": 5}
+
+
+# Define exceptions
+class StepperError(Exception):
+    pass
+
+
+class SmallStepSizeError(StepperError):
+    pass
+
+
+class SuitableStepSizeError(StepperError):
+    pass
+
+
+class MaximumStepsAllocatedError(StepperError):
+    pass
 
 
 class OpenclFibre(object):
@@ -182,14 +249,18 @@ class OpenclFibre(object):
         * cl_ss_sym_rk4
     """
     def __init__(self, name="ocl_fibre", length=1.0, alpha=None,
-                 beta=None, gamma=0.0, method="cl_rk4ip", total_steps=100,
-                 self_steepening=False, use_all=False, centre_omega=None,
+                 beta=None, gamma=0.0, traces=1,
+                 local_error=1.0e-6, method="cl_rk4ip", total_steps=100,
+                 self_steepening=False,
+                 use_all=False, centre_omega=None,
                  tau_1=12.2e-3, tau_2=32.0e-3, f_R=0.18,
-                 dorf='double', ctx=None, fast_math=False):
+                 channels=1, dorf='double', ctx=None, fast_math=False):
 
         self.name = name
         
         self.domain = None
+
+        self.channels = channels
 
         self.use_all = use_all
 
@@ -200,8 +271,8 @@ class OpenclFibre(object):
         self.h_R = None
         self.buf_h_R = None
         self.omega = None
-        self.ss_factor = None            
-        
+        self.ss_factor = None
+
         self.queue = None
         self.np_float = None
         self.np_complex = None
@@ -214,6 +285,8 @@ class OpenclFibre(object):
         self.plan = None
 
         self.buf_field = None
+        self.subfield1 = None
+        self.subfield2 = None
         self.buf_temp = None
         self.buf_interaction = None
         self.buf_factor = None
@@ -237,7 +310,30 @@ class OpenclFibre(object):
         self.stepsize = self.length / self.total_steps
         self.zs = np.linspace(0.0, self.length, self.total_steps + 1)
 
-        self.method = getattr(self, method.lower())
+        # Use a list of tuples ( z, A(z) ) for dense output if required:
+        self.traces = traces
+        self.storage = Storage(self.length, self.traces)
+
+        # Check if adaptive stepsize is required:
+        if method.upper().startswith('A'):
+            self.adaptive = True
+            self.local_error = local_error
+            self.step_sizes = []
+            self.z_adapt = []
+            # Store constants for adaptive method:
+            self.total_attempts = 100
+            self.steps_max = 50000
+            self.step_size_min = 1e-37  # some small value
+            self.safety = 0.9
+            self.max_factor = 10.0
+            self.min_factor = 0.2
+            # Store local error of method:
+            self.eta = errors[method[1:].lower()]
+            self.method = getattr(self, method[1:].lower())
+            self.cl_linear = self.cl_linear_ad
+        else:
+            self.adaptive = False
+            self.method = getattr(self, method.lower())
 
         if self.use_all:
             if self_steepening is False:
@@ -250,19 +346,21 @@ class OpenclFibre(object):
             self.cl_n = getattr(self, 'cl_n_default')
         
         self.linearity = Linearity(alpha, beta, sim_type="default",
-                                    use_cache=True, centre_omega=centre_omega, phase_lim=True)
-        self.nonlinearity = Nonlinearity(gamma, None, self_steepening,
-                                         False, 0,
-                                         use_all, tau_1, tau_2, f_R)
+                                   use_cache=True, centre_omega=centre_omega, phase_lim=True)
+        self.nonlinearity = Nonlinearity(gamma, self_steepening=self_steepening,
+                                         use_all=use_all, tau_1=tau_1, tau_2=tau_2, f_R=f_R)
         self.factor = None
 
     def __call__(self, domain, field):
         # Setup plan for calculating fast Fourier transforms:
         if self.plan is None:
             if version_py == 3:
-                self.plan = FFT(domain.t.astype(self.np_complex)).compile(self.thr, 
+                self.plan = FFT(domain.t.astype(self.np_complex)).compile(self.thr,
                         fast_math=self.fast_math, compiler_options=self.compiler_options)
-                self.plan.execute = self.reikna_fft_execute
+                if self.channels == 2:
+                    self.plan.execute = self.reikna_fft_execute_ch2
+                else:
+                    self.plan.execute = self.reikna_fft_execute
             else:
                 self.plan = Plan(domain.total_samples, queue=self.queue, dtype=self.np_complex, fast_math=self.fast_math)
 
@@ -277,17 +375,27 @@ class OpenclFibre(object):
                     self.nn_factor = 1.0 + self.omega * self.ss_factor
                 else:
                     self.nn_factor = None
+                if self.channels == 2:
+                    self.nn_factor = np.array([self.nn_factor, self.nn_factor])
+                    self.h_R = np.array([self.h_R, self.h_R])
 
         if self.factor is None:
-            self.factor = self.linearity(domain)
+            factor = self.linearity(domain)
+            if self.channels == 2:
+                self.factor = np.array([factor, factor])
+            else:
+                self.factor = factor
 
-        self.send_arrays_to_device(field, self.factor)
+        self.storage.t = domain.t
+        self.storage.nu = domain.nu
+        self.storage.reset_fft_counter()
+        self.storage.reset_array()
+        self.storage.append(0.0, field)
 
-        for z in self.zs[:-1]:
-            self.method(self.buf_field, self.buf_temp,
-                          self.buf_interaction, self.buf_factor, self.stepsize)
-
-        return self.buf_field.get()
+        if self.adaptive:
+            return self.adaptive_stepper(field)
+        else:
+            return self.standard_stepper(field)
 
     def cl_initialise(self, dorf="float"):
         """ Initialise opencl related parameters. """
@@ -303,7 +411,7 @@ class OpenclFibre(object):
                 self.compiler_options = "-cl-mad-enable -cl-fast-relaxed-math"
             else:
                 self.compiler_options = ""
-        
+
         if self.ctx is None:
             self.ctx = cl.create_some_context()
 
@@ -315,6 +423,125 @@ class OpenclFibre(object):
         substitutions = {"dorf": dorf}
         code = OPENCL_OPERATIONS.substitute(substitutions)
         self.prg = cl.Program(self.ctx, code).build(options=self.compiler_options)
+
+    def standard_stepper(self, field):
+        """ Take a fixed number of steps, each of equal length """
+        
+        self.send_arrays_to_device(field, self.factor)
+
+        for z in self.zs[:-1]:
+            self.method(self.buf_field, self.buf_temp,
+                          self.buf_interaction, self.buf_factor, self.stepsize)
+            self.storage.append(z + self.stepsize, self.buf_field)
+        return self.buf_field.get()
+
+    def adaptive_stepper(self, field):
+        #### Статья, где хорошо объясняется адпативный шаг, а также
+        #### исследуется его модифицированая версия:
+        #### DOI:10.1109/JLT.2009.2021538
+
+        # Constants used for approximation of solution using local
+        # extrapolation:
+        f_eta = np.power(2, self.eta - 1.0)
+        f_alpha = f_eta / (f_eta - 1.0)
+        f_beta = 1.0 / (f_eta - 1.0)
+        fh_eta = np.power(2, 1/self.eta)
+
+        z = 0.0
+        self.z_adapt.append(z)
+        h = self.stepsize
+
+        self.send_arrays_to_device(field, self.factor)
+
+        # Limit the number of steps in case of slowly converging runs:
+        for s in range(1, self.steps_max):
+            # If step-size takes z our of range [0.0, length], then correct it:
+            if (z + h) > self.length:
+                h = self.length - z
+
+            # Take an adaptive step:
+            for ta in range(0, self.total_attempts):
+                h_half = 0.5 * h
+                z_half = z + h_half
+
+                self.cl_copy(self.buf_fine, self.buf_field)
+
+                self.cl_copy(self.buf_coarse, self.buf_field)
+
+                # Calculate fine solution using two steps of size h_half:
+                self.cached_factor = False
+                self.method(self.buf_fine, self.buf_temp,
+                            self.buf_interaction, self.buf_factor, h_half)
+                self.method(self.buf_fine, self.buf_temp,
+                            self.buf_interaction, self.buf_factor, h_half)
+                # Calculate coarse solution using one step of size h:
+                self.cached_factor = False
+                self.method(self.buf_coarse, self.buf_temp,
+                            self.buf_interaction, self.buf_factor, h)
+
+                delta = self.relative_local_error(self.buf_fine, self.buf_coarse)
+
+                # Store current stepsize:
+                h_temp = h
+
+                # Adjust stepsize for next step:
+                if delta > 0.0:
+                    error_ratio = (self.local_error / delta)
+                    factr = \
+                        self.safety * np.power(error_ratio, 1.0 / self.eta)
+                    h = h_temp * min(self.max_factor,
+                                     max(self.min_factor, factr))
+                else:
+                    # Error approximately zero, so use largest stepsize
+                    # increase:
+                    h = h_temp * self.max_factor
+
+                if delta < 2.0 * self.local_error:
+                    # Successful step, so increment z h_temp (which is the
+                    # stepsize that was used for this step):
+                    z += h_temp
+
+                    self.buf_field = self.buf_fine.mul_add(f_alpha, self.buf_coarse, -f_beta)
+
+                    self.storage.append(z, self.buf_field)
+                    self.step_sizes.append(h_temp)
+                    self.z_adapt.append(z)
+
+                    break  # Successful attempt at step, move on to next step.
+
+                # Otherwise error was too large, continue with next attempt,
+                # but check the minimal step size first
+                else:
+                    # h = h_temp/2
+                    if h < self.step_size_min:
+                        raise SmallStepSizeError("Step size is extremely small")
+
+            else:
+                raise SuitableStepSizeError("Failed to set suitable step-size")
+
+            # If the desired z has been reached, then finish:
+            if z >= self.length:
+                return self.buf_field.get()
+
+        raise MaximumStepsAllocatedError("Failed to complete with maximum steps allocated")
+
+
+    def relative_local_error(self, A_fine, A_coarse):
+        """ Calculate an estimate of the relative local error """
+        self.prg.cl_norm(self.queue, self.shape, None,
+                                A_fine.data, self.err.data)
+
+        norm_fine = np.sqrt(np.real(cl_array.sum(self.err, queue=self.queue).get()))
+        A_rel = A_fine.mul_add(1.0, A_coarse, -1.0, queue=self.queue)
+        self.prg.cl_norm(self.queue, self.shape, None,
+                         A_rel.data, self.err.data)
+        norm_rel = np.sqrt(np.real(cl_array.sum(self.err, queue=self.queue).get()))
+
+        # Avoid possible divide by zero:
+        if norm_fine != 0.0:
+            return norm_rel / norm_fine
+        else:
+            return norm_rel
 
     @staticmethod
     def print_device_info():
@@ -340,10 +567,17 @@ class OpenclFibre(object):
 
     def send_arrays_to_device(self, field, factor):
         """ Move numpy arrays onto compute device. """
-        self.shape = field.shape
+        if self.channels == 2:
+            self.shape = (field.shape[0]*field.shape[1], )
+        else:
+            self.shape = field.shape
 
         self.buf_field = cl_array.to_device(
             self.queue, field.astype(self.np_complex))
+
+        if self.channels == 2:
+            self.subfield1 = cl_array.empty(self.queue, (field.shape[1], ), self.np_complex)
+            self.subfield2 = cl_array.empty(self.queue, (field.shape[1], ), self.np_complex)
 
         if self.buf_temp is None:
             self.buf_temp = cl_array.empty_like(self.buf_field)
@@ -365,6 +599,13 @@ class OpenclFibre(object):
         if self.cached_factor is False:
             self.buf_factor = cl_array.to_device(
                 self.queue, factor.astype(self.np_complex))
+        
+        if self.adaptive:
+            self.buf_only_factor = cl_array.to_device(
+                    self.queue, factor.astype(self.np_complex))
+            self.err = cl_array.empty_like(self.buf_field)
+            self.buf_fine = cl_array.empty_like(self.buf_field)
+            self.buf_coarse = cl_array.empty_like(self.buf_field)
 
     def cl_copy(self, dst_buffer, src_buffer):
         """ Copy contents of one buffer into another. """
@@ -376,15 +617,30 @@ class OpenclFibre(object):
         self.prg.cl_linear(self.queue, self.shape, None, field_buffer.data,
                            factor_buffer.data, self.np_float(stepsize))
         self.plan.execute(field_buffer.data)
+        
+    def cl_linear_ad(self, field_buffer, stepsize, factor_buffer):
+        """ Linear part of step. """
+        if (self.cached_factor is False):
+            self.prg.cl_factor(self.queue, self.shape, None, self.buf_factor.data,
+                               self.buf_only_factor.data, self.np_float(stepsize))
+            self.cached_factor = True
+        
+        self.plan.execute(field_buffer.data, inverse=True)
+        self.prg.cl_linear_cached(self.queue, self.shape, None, field_buffer.data,
+                                  self.buf_factor.data)
+        self.plan.execute(field_buffer.data)
 
     def cl_linear_cached(self, field_buffer, stepsize, factor_buffer):
         """ Linear part of step (cached version). """
         if (self.cached_factor is False):
             self.linearity.cache(stepsize)
-            self.buf_factor = cl_array.to_device(
-                self.queue, self.linearity.cached_factor.astype(self.np_complex))
+            if self.channels == 2:
+                self.buf_factor = cl_array.to_device(
+                    self.queue, np.array([self.linearity.cached_factor.astype(self.np_complex), self.linearity.cached_factor.astype(self.np_complex)]))
+            else:
+                self.buf_factor = cl_array.to_device(
+                    self.queue, self.linearity.cached_factor.astype(self.np_complex))
             self.cached_factor = True
-
         self.plan.execute(field_buffer.data, inverse=True)
         self.prg.cl_linear_cached(self.queue, self.shape, None,
                                   field_buffer.data, self.buf_factor.data)
@@ -398,7 +654,7 @@ class OpenclFibre(object):
     def cl_nonlinear(self, fieldA_buffer, stepsize, fieldB_buffer):
         """ Nonlinear part of step, exponential term"""
         self.prg.cl_nonlinear_exp(self.queue, self.shape, None, fieldA_buffer.data, fieldB_buffer.data,
-                              self.np_float(self.gamma), self.np_float(stepsize))
+                                  self.np_float(self.gamma), self.np_float(stepsize))
 
     def cl_n_with_all_and_ss(self, field_buffer, stepsize):
         """ Nonlinear part of step with self_steepening and raman """
@@ -409,16 +665,16 @@ class OpenclFibre(object):
 
         # conv = ifft(h_R*(fft(|A|^2)))
         self.cl_copy(self.buf_conv, self.buf_mod)
-        self.plan.execute(self.buf_conv.data, inverse = True)
+        self.plan.execute(self.buf_conv.data, inverse=True)
         self.prg.cl_mul(self.queue, self.shape, None,
                         self.buf_conv.data, self.buf_h_R.data)
         self.plan.execute(self.buf_conv.data)
 
         # p = fft( A*( (1-f_R)*|A|^2 + f_R*conv ) )
         self.prg.cl_nonlinear_with_all_st1(self.queue, self.shape, None,
-                                         field_buffer.data, self.buf_mod.data, self.buf_conv.data,
-                                         self.np_float(self.f_R), self.np_float(self.f_R_inv))
-        self.plan.execute(field_buffer.data, inverse = True)
+                                           field_buffer.data, self.buf_mod.data, self.buf_conv.data,
+                                           self.np_float(self.f_R), self.np_float(self.f_R_inv))
+        self.plan.execute(field_buffer.data, inverse=True)
 
         # A_out = ifft( factor*(1 + omega*ss_factor)*p)
         self.prg.cl_nonlinear_with_all_st2_with_ss(self.queue, self.shape, None, field_buffer.data,
@@ -437,15 +693,16 @@ class OpenclFibre(object):
 
         # conv = ifft(h_R*(fft(|A|^2)))
         self.cl_copy(self.buf_conv, self.buf_mod)
-        self.plan.execute(self.buf_conv.data, inverse = True)
+        self.plan.execute(self.buf_conv.data, inverse=True)
+        #print( max( temporal_power( self.buf_conv.get()[0] ) ), max( temporal_power( self.buf_conv.get()[1] ) ) )
         self.prg.cl_mul(self.queue, self.shape, None,
                         self.buf_conv.data, self.buf_h_R.data)
         self.plan.execute(self.buf_conv.data)
 
         # p = A*( (1-f_R)*|A|^2 + f_R*conv )
         self.prg.cl_nonlinear_with_all_st1(self.queue, self.shape, None,
-                                         field_buffer.data, self.buf_mod.data, self.buf_conv.data,
-                                         self.np_float(self.f_R), self.np_float(self.f_R_inv))
+                                           field_buffer.data, self.buf_mod.data, self.buf_conv.data,
+                                           self.np_float(self.f_R), self.np_float(self.f_R_inv))
 
         # A_out = factor*p
         self.prg.cl_nonlinear_with_all_st2_without_ss(self.queue, self.shape, None, field_buffer.data,
@@ -455,7 +712,6 @@ class OpenclFibre(object):
                              field_buffer.data, self.np_float(stepsize))
 
 
-
     def cl_sum(self, first_buffer, first_factor, second_buffer, second_factor):
         """ Calculate weighted summation. """
         self.prg.cl_sum(self.queue, self.shape, None,
@@ -463,12 +719,21 @@ class OpenclFibre(object):
                         second_buffer.data, self.np_float(second_factor))
 
     def reikna_fft_execute(self, d, inverse=False):
-        self.plan(d,d,inverse=inverse)
+        self.plan(d, d, inverse=inverse)
+
+    def reikna_fft_execute_ch2(self, d, inverse=False):
+        self.prg.cl_split(self.queue, self.shape, None,
+                       d, self.subfield1.data, self.subfield2.data,
+                       np.int32(self.shape[0]/2))
+        self.plan(self.subfield1.data, self.subfield1.data, inverse=inverse)
+        self.plan(self.subfield2.data, self.subfield2.data, inverse=inverse)
+        self.prg.cl_couple(self.queue, self.shape, None,
+                       d, self.subfield1.data, self.subfield2.data,
+                       np.int32(self.shape[0]/2))
     
     def cl_ss_symmetric(self, field, field_temp, field_interaction, factor, stepsize):
         """ Symmetric split-step method using OpenCL"""
         half_step = 0.5 * stepsize
-        
         self.cl_copy(field_temp, field)
 
         self.cl_linear(field_temp, half_step, factor)
@@ -487,32 +752,31 @@ class OpenclFibre(object):
             A_N =  A_L + (k0 + 2.0 * (k1 + k2) + k3) / 6.0
             return f.linear(A_N, hh)
         """
-
         inv_six = 1.0 / 6.0
         inv_three = 1.0 / 3.0
         half_step = 0.5 * stepsize
 
-        self.cl_linear(field, half_step, factor) #A_L
+        self.cl_linear(field, half_step, factor)  # A_L
 
         self.cl_copy(field_temp, field)
         self.cl_copy(field_linear, field)
-        self.cl_n(field_temp, stepsize) #k0
-        self.cl_sum(field, 1, field_temp, inv_six) #free k0
+        self.cl_n(field_temp, stepsize)  # k0
+        self.cl_sum(field, 1, field_temp, inv_six)  # free k0
 
         self.cl_sum(field_temp, 0.5, field_linear, 1)
-        self.cl_n(field_temp, stepsize) #k1
-        self.cl_sum(field, 1, field_temp, inv_three) #free k1
-        
+        self.cl_n(field_temp, stepsize)  # k1
+        self.cl_sum(field, 1, field_temp, inv_three)  # free k1
+
         self.cl_sum(field_temp, 0.5, field_linear, 1)
-        self.cl_n(field_temp, stepsize) #k2
-        self.cl_sum(field, 1, field_temp, inv_three) #free k2
-        
+        self.cl_n(field_temp, stepsize)  # k2
+        self.cl_sum(field, 1, field_temp, inv_three)  # free k2
+
         self.cl_sum(field_temp, 1, field_linear, 1)
-        self.cl_n(field_temp, stepsize) #k3
-        self.cl_sum(field, 1, field_temp, inv_six) #free k3
-        
+        self.cl_n(field_temp, stepsize)  # k3
+        self.cl_sum(field, 1, field_temp, inv_six)  # free k3
+
         self.cl_linear(field, half_step, factor)
-        
+
     def cl_rk4ip(self, field, field_temp, field_interaction, factor, stepsize):
         """ Runge-Kutta in the interaction picture method using OpenCL. """
         '''
@@ -524,6 +788,7 @@ class OpenclFibre(object):
         k3 = h * f.n(f.linear(A_I + k2, hh), z + h)
         return (k3 / 6.0) + f.linear(A_I + (k0 + 2.0 * (k1 + k2)) / 6.0, hh)
         '''
+
         inv_six = 1.0 / 6.0
         inv_three = 1.0 / 3.0
         half_step = 0.5 * stepsize
@@ -531,26 +796,27 @@ class OpenclFibre(object):
         self.cl_copy(field_temp, field)
         self.cl_linear(field, half_step, factor)
 
-        self.cl_copy(field_interaction, field) #A_I
+        self.cl_copy(field_interaction, field)  # A_I
         self.cl_n(field_temp, stepsize)
-        self.cl_linear(field_temp, half_step, factor) #k0
+        self.cl_linear(field_temp, half_step, factor)  # k0
 
-        self.cl_sum(field, 1.0, field_temp, inv_six) #free k0
+        self.cl_sum(field, 1.0, field_temp, inv_six)  # free k0
         self.cl_sum(field_temp, 0.5, field_interaction, 1.0)
-        self.cl_n(field_temp, stepsize) #k1
+        self.cl_n(field_temp, stepsize)  # k1
 
-        self.cl_sum(field, 1.0, field_temp, inv_three) #free k1
+        self.cl_sum(field, 1.0, field_temp, inv_three)  # free k1
         self.cl_sum(field_temp, 0.5, field_interaction, 1.0)
-        self.cl_n(field_temp, stepsize) #k2
+        self.cl_n(field_temp, stepsize)  # k2
 
-        self.cl_sum(field, 1.0, field_temp, inv_three) #free k2
+        self.cl_sum(field, 1.0, field_temp, inv_three)  # free k2
         self.cl_sum(field_temp, 1.0, field_interaction, 1.0)
         self.cl_linear(field_temp, half_step, factor)
-        self.cl_n(field_temp, stepsize) #k3
+        self.cl_n(field_temp, stepsize)  # k3
 
         self.cl_linear(field, half_step, factor)
 
         self.cl_sum(field, 1.0, field_temp, inv_six)
+
 
 if __name__ == "__main__":
     # Compare simulations using Fibre and OpenclFibre modules.
@@ -597,7 +863,7 @@ if __name__ == "__main__":
 
     MEAN_RELATIVE_ERROR = np.mean(np.abs(DELTA_POWER))
     MEAN_RELATIVE_ERROR /= np.max(temporal_power(NO_OCL_OUT))
-    
+
     MAX_RELATIVE_ERROR = np.max(np.abs(DELTA_POWER))
     MAX_RELATIVE_ERROR /= np.max(temporal_power(NO_OCL_OUT))
 
@@ -727,9 +993,21 @@ if __name__ == "__main__":
     stop = time.time()
     OCL_DURATION = (stop - start)
     OCL_OUT = sys.fields["ocl_fibre"]
+    
+    sys = System(DOMAIN)
+    sys.add(Sech(peak_power=P_0, width=WIDTH, using_fwhm=True))
+    sys.add(OpenclFibre("ocl_fibre", beta=BETA, gamma=GAMMA, self_steepening=TAU_SHOCK, use_all='hollenbeck',
+                        method='acl_rk4ip', length=LENGTH))
+
+    start = time.time()
+    sys.run()
+    stop = time.time()
+    OCLA_DURATION = (stop - start)
+    OCLA_OUT = sys.fields["ocl_fibre"]
 
     NO_OCL_POWER = temporal_power(NO_OCL_OUT)
     OCL_POWER = temporal_power(OCL_OUT)
+    OCLA_POWER = temporal_power(OCLA_OUT)
     DELTA_POWER = NO_OCL_POWER - OCL_POWER
 
     MEAN_RELATIVE_ERROR = np.mean(np.abs(DELTA_POWER))
@@ -740,11 +1018,12 @@ if __name__ == "__main__":
 
     print("Run time without OpenCL: %e" % NO_OCL_DURATION)
     print("Run time with OpenCL: %e" % OCL_DURATION)
+    print("Run time with OpenCL and adaptive step: %e" % OCLA_DURATION)
     print("Mean relative error: %e" % MEAN_RELATIVE_ERROR)
     print("Max relative error: %e" % MAX_RELATIVE_ERROR)
 
     # Expect both plots to appear identical:
-    multi_plot(SYS.domain.t, [NO_OCL_POWER, OCL_POWER], z_labels=['CPU','GPU'],
+    multi_plot(SYS.domain.t, [NO_OCL_POWER, OCL_POWER, OCLA_POWER], z_labels=['CPU','GPU','AGPU'],
                 x_label=labels["t"], y_label=labels["P_t"], use_fill=False)
 
 
